@@ -1,0 +1,166 @@
+/**
+ * fx-animations.css — FX 组件共享 @keyframes 与动画工具类（仅 CSS 动画类 FX 组件使用）
+ *
+ * 维护约定:
+ *   - 各 FX 组件内部不写 @keyframes，统一收敛到本文件；命名统一加 fx- 前缀，
+ *     避免与项目既有 keyframes / 其他库（如 meteor 等同名帧）冲突
+ *   - 多个子代理共用本文件：追加前先读后 append，禁止整文件覆盖
+ *     （FX-03-b 曾被并行写入覆盖一次，已按此约定合并回双方内容）
+ *
+ * 当前内容:
+ *   1. fx-marquee / fx-marquee-vertical —— FxMarquee 无缝跑马灯（Magic UI, MIT）
+ *   2. fx-shimmer-slide / fx-spin-around —— FxShimmerButton 流光按钮（Magic UI, MIT）
+ *   3. fx-flicker + .fx-flicker-glow —— FxFlickerText 霓虹明灭（Animista, FreeBSD）
+ *
+ * 引入方式:
+ *   - 方式 A（主代理统一）: 在 src/app/globals.css @import 区加入
+ *       @import "../components/fx/fx-animations.css";
+ *   - 方式 B（组件自足）: 使用方组件直接 import './fx-animations.css'（bundler 去重，两种方式可并存）
+ *
+ * 无障碍:
+ *   - prefers-reduced-motion: reduce 下所有 fx 动画类直接关闭（终态可见）
+ *   - 站点级「暂停动效」(store.pausedMotion) 由各组件以 animation-play-state: paused 内联接管，
+ *     无需修改本文件
+ */
+
+/* ═══ 1. FxMarquee — 无缝跑马灯 ══════════════════════════════════════════
+ * 来源: Magic UI registry css (https://magicui.design/r/marquee.json) — MIT
+ * --gap 变量由 FxMarquee 根元素（[--gap:1rem]）提供，位移终点多让出一个 gap 保证无缝
+ */
+@keyframes fx-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes fx-marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+/* ═══ 2. FxShimmerButton — 流光按钮 ══════════════════════════════════════
+ * 来源: Magic UI shimmer-button (https://magicui.design/r/shimmer-button) — MIT
+ * 原名 shimmer-slide / spin-around，加 fx- 前缀防冲突；
+ * --speed 由组件内联注入（默认 3s）；animationPlayState 由组件内联接管
+ */
+@keyframes fx-shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+  }
+}
+
+@keyframes fx-spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+  }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+  }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+  }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+  }
+}
+
+.fx-shimmer-slide {
+  animation: fx-shimmer-slide var(--speed, 3s) ease-in-out infinite alternate;
+}
+
+.fx-spin-around {
+  animation: fx-spin-around calc(var(--speed, 3s) * 2) infinite linear;
+}
+
+/* ═══ 3. FxFlickerText — 霓虹明灭文字 ═══════════════════════════════════
+ * 来源: Animista text-flicker-in-glow (https://animista.net/play/text/flicker)
+ *       — FreeBSD License (© 2017 Ana Travas)
+ * 适配: 原「一次性点亮入场」改造为循环明灭；text-shadow 由白光改为
+ *       金(#FFD700) + 紫(#BF5AF2) 双色光晕，呼应站点 .logo-go-glow 配色；
+ *       熄灭帧用同长度全透明 shadow（替代 none），保证 keyframes 插值平滑
+ */
+.fx-flicker-glow {
+  --fx-flicker-duration: 4s;
+  --fx-flicker-shadow:
+    0 0 6px rgba(255, 215, 0, 0.6),
+    0 0 18px rgba(191, 90, 242, 0.35),
+    0 0 42px rgba(255, 215, 0, 0.25);
+  --fx-flicker-shadow-off:
+    0 0 0 rgba(255, 215, 0, 0),
+    0 0 0 rgba(191, 90, 242, 0),
+    0 0 0 rgba(255, 215, 0, 0);
+  animation: fx-flicker var(--fx-flicker-duration, 4s) linear infinite;
+  color: #ffd700;
+  text-shadow: var(--fx-flicker-shadow);
+}
+
+@keyframes fx-flicker {
+  0%, 7.9% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  8.4% {
+    opacity: 0.25;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  8.9% {
+    opacity: 0.95;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  9.4% {
+    opacity: 0.4;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  10%, 37.9% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  38.4% {
+    opacity: 0.45;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  38.9% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  39.4% {
+    opacity: 0.6;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  40%, 69.9% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  70.5% {
+    opacity: 0.5;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  71% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+  71.5% {
+    opacity: 0.75;
+    text-shadow: var(--fx-flicker-shadow-off);
+  }
+  72.2%, 100% {
+    opacity: 1;
+    text-shadow: var(--fx-flicker-shadow);
+  }
+}
+
+/* ═══ 4. 无障碍兜底：系统级减少动效 → 全部 fx 动画类关闭（终态可见） ═══ */
+@media (prefers-reduced-motion: reduce) {
+  .fx-shimmer-slide,
+  .fx-spin-around,
+  .fx-flicker-glow {
+    animation: none;
+  }
+}

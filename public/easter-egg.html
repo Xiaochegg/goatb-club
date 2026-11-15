@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小车爱拉稀 · 一趟颠簸又治愈的公路旅行</title>
+<style>
+  /* ========== 基础重置 ========== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color 1.2s ease, color 0.8s ease;
+    overflow-x: hidden;
+    line-height: 1.65;
+  }
+
+  /* ========== 主题变量 ========== */
+  body[data-theme="start"] {
+    --bg: #f5e6c8; --bg2: #ffe9b8; --text: #2b2118;
+    --accent: #e8a33d; --car: #d94f3d;
+    --road: rgba(43, 33, 24, 0.18);
+    --card-bg: rgba(255, 255, 255, 0.45);
+  }
+  body[data-theme="survival"] {
+    --bg: #b8cc94; --bg2: #9fc47a; --text: #2a3320;
+    --accent: #4e7a30; --car: #d94f3d;
+    --road: rgba(42, 51, 32, 0.25);
+    --card-bg: rgba(255, 255, 255, 0.3);
+  }
+  body[data-theme="garbage"] {
+    --bg: #1a1a1a; --bg2: #0d0d0d; --text: #eaeaea;
+    --accent: #ff00ff; --car: #ff4d6d;
+    --road: rgba(255, 255, 255, 0.15);
+    --card-bg: rgba(255, 255, 255, 0.05);
+  }
+  body[data-theme="bobby"] {
+    --bg: #2a1810; --bg2: #150a05; --text: #ffd6a5;
+    --accent: #ff7f50; --car: #ffcc00;
+    --road: rgba(255, 127, 80, 0.3);
+    --card-bg: rgba(255, 127, 80, 0.08);
+  }
+  body[data-theme="uno"] {
+    --bg: #1a1a3a; --bg2: #0a0a1a; --text: #ffffff;
+    --accent: #ff4d4d; --car: #ffcc00;
+    --road: rgba(255, 255, 255, 0.2);
+    --card-bg: rgba(255, 255, 255, 0.05);
+  }
+  body[data-theme="end"] {
+    --bg: #0a0e27; --bg2: #050818; --text: #c9d1ff;
+    --accent: #ffb84d; --car: #d94f3d;
+    --road: rgba(255, 184, 77, 0.25);
+    --card-bg: rgba(255, 255, 255, 0.04);
+  }
+
+  /* ========== 背景光晕层 ========== */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 110%, var(--accent) 0%, transparent 65%);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+    transition: background 1.2s ease, opacity 1.2s ease;
+  }
+
+  /* ========== 道路与小车（固定底部） ========== */
+  .road-scene {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 100px;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .road-line {
+    position: absolute;
+    bottom: 52px; left: 0; right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--road) 0 28px,
+      transparent 28px 56px
+    );
+    transition: background 1.2s ease;
+  }
+
+  .car {
+    position: absolute;
+    bottom: 44px;
+    left: 0;
+    width: 160px;
+    height: 80px;
+    will-change: transform;
+    filter: drop-shadow(0 8px 12px rgba(0,0,0,0.25));
+    transition: width 0.3s ease;
+  }
+
+  .car .body-fill { fill: var(--car); transition: fill 0.8s ease; }
+  .car .stroke-color { stroke: var(--text); transition: stroke 0.8s ease; }
+  .car .window { fill: #a8d4e8; transition: fill 0.8s ease; }
+
+  .spokes {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .exhaust circle {
+    animation: puff 2s ease-out infinite;
+  }
+  .exhaust circle:nth-child(2) { animation-delay: 0.5s; }
+  .exhaust circle:nth-child(3) { animation-delay: 1s; }
+
+  @keyframes puff {
+    0% { transform: translate(0, 0) scale(0.6); opacity: 0.35; }
+    100% { transform: translate(-30px, -15px) scale(1.8); opacity: 0; }
+  }
+
+  /* 尾灯光 */
+  .taillight-glow {
+    animation: taillight 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes taillight {
+    from { opacity: 0.6; }
+    to { opacity: 1; }
+  }
+
+  /* ========== 主内容 ========== */
+  main { position: relative; z-index: 1; }
+
+  .chapter {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 24px 200px;
+    overflow: hidden;
+  }
+
+  .chapter-inner {
+    max-width: 720px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ========== 入场动画 ========== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .chapter.visible .reveal { opacity: 1; transform: translateY(0); }
+  .chapter.visible .reveal:nth-child(1) { transition-delay: 0.05s; }
+  .chapter.visible .reveal:nth-child(2) { transition-delay: 0.18s; }
+  .chapter.visible .reveal:nth-child(3) { transition-delay: 0.3s; }
+  .chapter.visible .reveal:nth-child(4) { transition-delay: 0.42s; }
+  .chapter.visible .reveal:nth-child(5) { transition-delay: 0.54s; }
+
+  /* ========== 排版 ========== */
+  .chapter-eyebrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 16px;
+    transition: color 0.8s ease;
+  }
+
+  .chapter-title {
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+
+  .chapter-title .highlight {
+    color: var(--accent);
+    transition: color 0.8s ease;
+  }
+
+  .chapter-desc {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    opacity: 0.85;
+    max-width: 560px;
+    margin-bottom: 12px;
+  }
+
+  .chapter-meta {
+    font-size: 0.9rem;
+    opacity: 0.55;
+    letter-spacing: 0.08em;
+  }
+
+  /* ========== 起点 ========== */
+  .intro-signature {
+    margin-top: 40px;
+    padding: 20px 28px;
+    background: var(--card-bg);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-size: 1.05rem;
+    font-style: italic;
+    transition: background 0.8s ease, border-color 0.8s ease;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    letter-spacing: 0.25em;
+    opacity: 0.5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    animation: hint-bob 2s ease-in-out infinite;
+  }
+  .scroll-hint::after {
+    content: '';
+    width: 1px;
+    height: 32px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+  @keyframes hint-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ========== 养老生存：像素树 ========== */
+  .pixel-deco {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .tree {
+    width: 40px;
+    height: 60px;
+    opacity: 0.6;
+  }
+  .tree .leaf {
+    fill: var(--accent);
+    opacity: 0.5;
+    transition: fill 0.8s ease;
+  }
+  .tree .trunk { fill: #6b4a2b; }
+
+  /* 生长动画 */
+  .chapter.visible .tree {
+    animation: grow 1.4s cubic-bezier(0.2, 1.2, 0.3, 1) forwards;
+    transform-origin: bottom center;
+  }
+  @keyframes grow {
+    from { transform: scaleY(0); opacity: 0; }
+    to { transform: scaleY(1); opacity: 0.6; }
+  }
+
+  /* ========== 废片：故障 ========== */
+  .glitch-text {
+    position: relative;
+    display: inline-block;
+  }
+  .glitch-text::before,
+  .glitch-text::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .chapter.visible .glitch-text::before {
+    color: #ff00ff;
+    animation: glitch-a 2.4s infinite steps(1);
+  }
+  .chapter.visible .glitch-text::after {
+    color: #00ffff;
+    animation: glitch-b 2.4s infinite steps(1);
+  }
+  @keyframes glitch-a {
+    0%, 88%, 100% { opacity: 0; transform: translate(0); }
+    89% { opacity: 0.9; transform: translate(-3px, 2px); }
+    91% { opacity: 0.9; transform: translate(2px, -1px); }
+    93% { opacity: 0; }
+  }
+  @keyframes glitch-b {
+    0%, 88%, 100% { opacity: 0; transform: translate(0); }
+    90% { opacity: 0.7; transform: translate(3px, -2px); }
+    92% { opacity: 0.7; transform: translate(-2px, 1px); }
+    94% { opacity: 0; }
+  }
+
+  /* 噪点层 */
+  .noise {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index: 0;
+  }
+
+  /* ========== 波比：弹幕 ========== */
+  .danmaku-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+  .danmaku {
+    position: absolute;
+    white-space: nowrap;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255, 127, 80, 0.8), 0 2px 4px rgba(0,0,0,0.6);
+    opacity: 0;
+    animation: danmaku-fly linear infinite;
+  }
+  @keyframes danmaku-fly {
+    0% { transform: translateX(110vw); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateX(-30vw); opacity: 0; }
+  }
+
+  /* ========== UNO：卡牌 ========== */
+  .uno-cards {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .uno-card {
+    position: absolute;
+    width: clamp(60px, 9vw, 90px);
+    aspect-ratio: 2/3;
+    border-radius: 10px;
+    background: var(--card-color, #ff4d4d);
+    color: #fff;
+    font-weight: 900;
+    font-size: clamp(0.9rem, 1.6vw, 1.3rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #fff;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    opacity: 0;
+    transform: translateY(80px) rotate(0deg) scale(0.4);
+    transition: opacity 0.7s ease, transform 1s cubic-bezier(0.2, 1.4, 0.4, 1);
+  }
+  .chapter.visible .uno-card {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--rot)) scale(1);
+    transition-delay: var(--delay);
+  }
+  .uno-card:nth-child(1) { left: 6%;  top: 14%; }
+  .uno-card:nth-child(2) { left: 20%; top: 58%; }
+  .uno-card:nth-child(3) { right: 8%;  top: 18%; }
+  .uno-card:nth-child(4) { right: 22%; top: 62%; }
+  .uno-card:nth-child(5) { left: 46%; top: 8%; }
+
+  /* ========== 终点：星点 ========== */
+  .stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    box-shadow: 0 0 8px var(--accent);
+    transition: opacity 1.5s ease;
+  }
+  .chapter.visible .star {
+    opacity: var(--star-op, 0.6);
+    animation: twinkle var(--star-dur, 3s) ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    from { opacity: 0.2; }
+    to { opacity: 0.9; }
+  }
+
+  /* ========== 终点 CTA ========== */
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 36px;
+    padding: 16px 32px;
+    background: var(--accent);
+    color: #0a0e27;
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-decoration: none;
+    border-radius: 100px;
+    letter-spacing: 0.02em;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.8s ease;
+    box-shadow: 0 8px 24px rgba(255, 184, 77, 0.35);
+  }
+  .cta:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 32px rgba(255, 184, 77, 0.5);
+  }
+  .cta:active { transform: translateY(0) scale(0.98); }
+  .cta .arrow {
+    transition: transform 0.3s ease;
+  }
+  .cta:hover .arrow { transform: translateX(4px); }
+
+  /* ========== 响应式 ========== */
+  @media (max-width: 768px) {
+    .car { width: 110px; height: 55px; bottom: 48px; }
+    .road-scene { height: 80px; }
+    .road-line { bottom: 40px; }
+    .chapter { padding: 60px 20px 160px; }
+    .intro-signature { margin-top: 24px; padding: 16px 20px; font-size: 0.95rem; }
+    .scroll-hint { bottom: 110px; }
+    .danmaku { font-size: 0.85rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body data-theme="start">
+
+  <!-- ========== 道路 + 小车 ========== -->
+  <div class="road-scene" aria-hidden="true">
+    <div class="road-line" id="roadLine"></div>
+    <svg class="car" id="car" viewBox="0 0 160 80" xmlns="http://www.w3.org/2000/svg">
+      <!-- 尾气 -->
+      <g class="exhaust">
+        <circle cx="18" cy="52" r="4" fill="var(--text)" opacity="0.25"/>
+        <circle cx="12" cy="48" r="3" fill="var(--text)" opacity="0.2"/>
+        <circle cx="6"  cy="44" r="2.5" fill="var(--text)" opacity="0.15"/>
+      </g>
+      <!-- 车身主体 -->
+      <path class="body-fill stroke-color"
+            d="M22,56 L22,42 Q22,36 30,36 L56,36 L72,21 L116,21 Q126,21 131,29 L141,36 L151,39 Q156,41 156,48 L156,56 Z"
+            stroke-width="2" stroke-linejoin="round"/>
+      <!-- 车窗 -->
+      <path class="window stroke-color"
+            d="M64,36 L76,25 L112,25 Q118,25 121,31 L127,36 Z"
+            stroke-width="2" stroke-linejoin="round"/>
+      <!-- 前车灯 -->
+      <rect x="148" y="43" width="8" height="6" rx="2" fill="#ffe68a"/>
+      <!-- 尾灯（发光） -->
+      <rect class="taillight-glow" x="21" y="43" width="5" height="6" rx="1.5" fill="#ff3b3b"/>
+      <!-- 后轮 -->
+      <g class="wheel" data-wheel="back">
+        <circle cx="46" cy="62" r="12" fill="#2b2118"/>
+        <circle cx="46" cy="62" r="5" fill="#f5e6c8"/>
+        <g class="spokes" data-spokes>
+          <line x1="46" y1="52" x2="46" y2="72" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="36" y1="62" x2="56" y2="62" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="39" y1="55" x2="53" y2="69" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="53" y1="55" x2="39" y2="69" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+        </g>
+      </g>
+      <!-- 前轮 -->
+      <g class="wheel" data-wheel="front">
+        <circle cx="130" cy="62" r="12" fill="#2b2118"/>
+        <circle cx="130" cy="62" r="5" fill="#f5e6c8"/>
+        <g class="spokes" data-spokes>
+          <line x1="130" y1="52" x2="130" y2="72" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="120" y1="62" x2="140" y2="62" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="123" y1="55" x2="137" y2="69" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+          <line x1="137" y1="55" x2="123" y2="69" stroke="#f5e6c8" stroke-width="1.5" opacity="0.75"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ========== 主内容 ========== -->
+  <main>
+
+    <!-- 起点 -->
+    <section class="chapter" data-theme="start" id="ch-start">
+      <div class="chapter-inner">
+        <div class="reveal">
+          <div class="chapter-eyebrow">UID 640908245</div>
+          <h1 class="chapter-title">
+            小车<span class="highlight">爱拉稀</span>
+          </h1>
+          <p class="chapter-desc">
+            185 个视频，不多。但每一站都停过。<br>
+            一个不太稳定，但一直向前的人。
+          </p>
+        </div>
+        <div class="reveal intro-signature">
+          “三连关注了你就是我 3 舅舅。”
+        </div>
+      </div>
+      <div class="scroll-hint reveal">向下滚动 · 发车</div>
+    </section>
+
+    <!-- 第一站：养老生存 -->
+    <section class="chapter" data-theme="survival" id="ch-survival">
+      <!-- 像素树装饰 -->
+      <svg class="pixel-deco tree" style="left:6%; top:18%;" viewBox="0 0 40 60">
+        <rect class="trunk" x="17" y="36" width="6" height="24"/>
+        <rect class="leaf" x="8" y="20" width="24" height="18"/>
+        <rect class="leaf" x="12" y="10" width="16" height="14"/>
+        <rect class="leaf" x="16" y="2"  width="8"  height="10"/>
+      </svg>
+      <svg class="pixel-deco tree" style="right:8%; top:30%;" viewBox="0 0 40 60">
+        <rect class="trunk" x="17" y="36" width="6" height="24"/>
+        <rect class="leaf" x="8" y="20" width="24" height="18"/>
+        <rect class="leaf" x="12" y="10" width="16" height="14"/>
+        <rect class="leaf" x="16" y="2"  width="8"  height="10"/>
+      </svg>
+      <svg class="pixel-deco tree" style="left:22%; top:65%;" viewBox="0 0 40 60">
+        <rect class="trunk" x="17" y="36" width="6" height="24"/>
+        <rect class="leaf" x="8" y="20" width="24" height="18"/>
+        <rect class="leaf" x="12" y="10" width="16" height="14"/>
+      </svg>
+
+      <div class="chapter-inner">
+        <div class="reveal">
+          <div class="chapter-eyebrow">合集 · 养老生存</div>
+          <h2 class="chapter-title">在极限模式里<br>找个小破岛</h2>
+        </div>
+        <div class="reveal">
+          <p class="chapter-desc">
+            挖挖矿，种点田，不急不躁。<br>
+            9 集，每一集都像在说：<br>
+            “急什么，反正今晚 9 点才更新。”
+          </p>
+        </div>
+        <div class="reveal chapter-meta">9 集 · 慢节奏 · 乡间土路</div>
+      </div>
+    </section>
+
+    <!-- 第二站：废片 -->
+    <section class="chapter" data-theme="garbage" id="ch-garbage">
+      <div class="noise"></div>
+      <div class="chapter-inner">
+        <div class="reveal">
+          <div class="chapter-eyebrow">合集 · 废片</div>
+          <h2 class="chapter-title">
+            <span class="glitch-text" data-text="剪的时候觉得能封神">剪的时候觉得能封神</span>
+          </h2>
+        </div>
+        <div class="reveal">
+          <p class="chapter-desc">
+            发出来之后，它们成了“废片”。<br>
+            2 集。一段不太愿意回头的路。<br>
+            路面有裂缝，但车没停。
+          </p>
+        </div>
+        <div class="reveal chapter-meta">2 集 · 故障路段 · 冷灰色</div>
+      </div>
+    </section>
+
+    <!-- 第三站：波比 -->
+    <section class="chapter" data-theme="bobby" id="ch-bobby">
+      <div class="danmaku-layer" id="danmakuLayer"></div>
+      <div class="chapter-inner">
+        <div class="reveal">
+          <div class="chapter-eyebrow">系列 · 小车玩波比吓掉了</div>
+          <h2 class="chapter-title">
+            胆子大概<br><span class="highlight">只有车轮那么大</span>
+          </h2>
+        </div>
+        <div class="reveal">
+          <p class="chapter-desc">
+            玩波比的时候，车会突然往下掉。<br>
+            落地、弹起、再落地。<br>
+            5 集，每一集都有人笑出声。
+          </p>
+        </div>
+        <div class="reveal chapter-meta">5 集 · 断崖路段 · 警示橙</div>
+      </div>
+    </section>
+
+    <!-- 第四站：UNO -->
+    <section class="chapter" data-theme="uno" id="ch-uno">
+      <div class="uno-cards">
+        <div class="uno-card" style="--rot:-14deg; --delay:0.1s; --card-color:#ff4d4d;">+4</div>
+        <div class="uno-card" style="--rot:9deg;   --delay:0.22s; --card-color:#ffcc00;">反转</div>
+        <div class="uno-card" style="--rot:-6deg;  --delay:0.34s; --card-color:#4da6ff;">跳过</div>
+        <div class="uno-card" style="--rot:16deg;  --delay:0.46s; --card-color:#4dd97f;">+2</div>
+        <div class="uno-card" style="--rot:-10deg; --delay:0.58s; --card-color:#ff4d4d;">UNO!</div>
+      </div>
+      <div class="chapter-inner" style="text-align:center;">
+        <div class="reveal">
+          <div class="chapter-eyebrow">系列 · UNO!</div>
+          <h2 class="chapter-title">
+            有些友谊<br><span class="highlight">在 UNO 面前不堪一击</span>
+          </h2>
+        </div>
+        <div class="reveal">
+          <p class="chapter-desc" style="margin-left:auto; margin-right:auto;">
+            5 集，红黄蓝绿全开。<br>
+            小车从牌堆中间穿过去，<br>
+            身后散落着 +4 和反转。
+          </p>
+        </div>
+        <div class="reveal chapter-meta">5 集 · 牌桌路段 · 全色彩</div>
+      </div>
+    </section>
+
+    <!-- 终点 -->
+    <section class="chapter" data-theme="end" id="ch-end">
+      <div class="stars" id="stars"></div>
+      <div class="chapter-inner" style="text-align:center;">
+        <div class="reveal">
+          <div class="chapter-eyebrow">终点 · 也是起点</div>
+          <h2 class="chapter-title">
+            还在<span class="highlight">路上</span>
+          </h2>
+        </div>
+        <div class="reveal">
+          <p class="chapter-desc" style="margin-left:auto; margin-right:auto;">
+            185 个视频，不多。<br>
+            但每一站都停过。<br>
+            300 粉露手 qwq——这句话还挂在公告里。
+          </p>
+        </div>
+        <div class="reveal">
+          <a class="cta" href="https://space.bilibili.com/640908245" target="_blank" rel="noopener">
+            去 B 站看看
+            <span class="arrow">→</span>
+          </a>
+        </div>
+        <div class="reveal chapter-meta" style="margin-top:32px;">
+          下一站，由你定义。
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ========== 元素引用 ==========
+  const car        = document.getElementById('car');
+  const roadLine   = document.getElementById('roadLine');
+  const spokes     = document.querySelectorAll('[data-spokes]');
+  const chapters   = Array.from(document.querySelectorAll('.chapter'));
+  const reduced    = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ========== 状态 ==========
+  let scrollProgress = 0;
+  let targetX = 0;
+  let currentX = 0;
+  let wheelAngle = 0;
+  let lastTheme = 'start';
+  let rafId = null;
+
+  // ========== 工具 ==========
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+  const lerp  = (a, b, t) => a + (b - a) * t;
+
+  // ========== 计算目标位置 ==========
+  function updateTargets() {
+    const doc = document.documentElement;
+    const maxScroll = doc.scrollHeight - window.innerHeight;
+    scrollProgress = maxScroll > 0 ? clamp(window.scrollY / maxScroll, 0, 1) : 0;
+
+    // 小车横向位置
+    const vw = window.innerWidth;
+    const carW = car.getBoundingClientRect().width || 160;
+    const pad = Math.max(24, vw * 0.04);
+    targetX = pad + (vw - carW - pad * 2) * scrollProgress;
+
+    // 道路虚线滚动（相对运动）
+    if (!reduced) {
+      roadLine.style.backgroundPosition = (-scrollProgress * 3200) + 'px 0';
+    }
+
+    // 主题切换 + 可见性
+    const centerY = window.innerHeight / 2;
+    let closest = chapters[0];
+    let minDist = Infinity;
+
+    for (const ch of chapters) {
+      const r = ch.getBoundingClientRect();
+      const chCenter = r.top + r.height / 2;
+      const dist = Math.abs(chCenter - centerY);
+
+      if (dist < minDist) {
+        minDist = dist;
+        closest = ch;
+      }
+
+      // 进入可视区域 70% 时触发入场
+      if (r.top < window.innerHeight * 0.72 && r.bottom > window.innerHeight * 0.15) {
+        if (!ch.classList.contains('visible')) {
+          ch.classList.add('visible');
+          if (ch.dataset.theme === 'bobby') spawnDanmaku();
+          if (ch.dataset.theme === 'end') spawnStars();
+        }
+      }
+    }
+
+    if (closest && closest.dataset.theme !== lastTheme) {
+      lastTheme = closest.dataset.theme;
+      document.body.dataset.theme = lastTheme;
+    }
+  }
+
+  // ========== 动画循环 ==========
+  function animate() {
+    // 惯性缓动
+    const dx = targetX - currentX;
+    currentX += dx * (reduced ? 1 : 0.085);
+
+    // 速度驱动的颠簸
+    const speed = Math.abs(dx);
+    const t = performance.now() / 1000;
+    const bob = Math.sin(t * 6) * 1.2 + Math.min(speed * 0.06, 4) * Math.sin(t * 20);
+    const tilt = clamp(dx * 0.06, -6, 6);
+
+    car.style.transform =
+      `translate3d(${currentX.toFixed(2)}px, ${bob.toFixed(2)}px, 0) rotate(${tilt.toFixed(2)}deg)`;
+
+    // 车轮旋转：滚动时转得快，静止时也会缓慢转动
+    if (!reduced) {
+      wheelAngle += speed * 0.6 + 0.25;
+      spokes.forEach(s => {
+        s.style.transform = `rotate(${wheelAngle.toFixed(1)}deg)`;
+      });
+    }
+
+    rafId = requestAnimationFrame(animate);
+  }
+
+  // ========== 弹幕生成 ==========
+  let danmakuSpawned = false;
+  function spawnDanmaku() {
+    if (danmakuSpawned) return;
+    danmakuSpawned = true;
+
+    const layer = document.getElementById('danmakuLayer');
+    const texts = ['？', '哈哈哈哈', '吓我一跳', '寄', '绷不住了', '这也行', '666', '车呢？', '笑死', '心脏骤停'];
+    const count = window.innerWidth < 768 ? 12 : 22;
+
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('span');
+      el.className = 'danmaku';
+      el.textContent = texts[Math.floor(Math.random() * texts.length)];
+      el.style.top = (5 + Math.random() * 85) + '%';
+      el.style.left = '0';
+      el.style.fontSize = (0.8 + Math.random() * 0.9) + 'rem';
+      el.style.animationDuration = (6 + Math.random() * 8) + 's';
+      el.style.animationDelay = (Math.random() * 10) + 's';
+      el.style.opacity = '0';
+      layer.appendChild(el);
+    }
+  }
+
+  // ========== 星点生成 ==========
+  let starsSpawned = false;
+  function spawnStars() {
+    if (starsSpawned) return;
+    starsSpawned = true;
+
+    const layer = document.getElementById('stars');
+    const count = window.innerWidth < 768 ? 40 : 90;
+
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'star';
+      el.style.left = Math.random() * 100 + '%';
+      el.style.top  = Math.random() * 100 + '%';
+      const size = 2 + Math.random() * 3;
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.setProperty('--star-op', (0.3 + Math.random() * 0.6).toFixed(2));
+      el.style.setProperty('--star-dur', (2 + Math.random() * 3).toFixed(2) + 's');
+      el.style.animationDelay = (Math.random() * 2) + 's';
+      layer.appendChild(el);
+    }
+  }
+
+  // ========== 绑定事件 ==========
+  window.addEventListener('scroll', updateTargets, { passive: true });
+  window.addEventListener('resize', () => {
+    updateTargets();
+    // 窗口尺寸变化时重新计算小车位置，避免越界
+    currentX = targetX;
+  });
+
+  // ========== 启动 ==========
+  updateTargets();
+  animate();
+
+  // 首屏可见性：起点章节立即显示
+  const startCh = document.getElementById('ch-start');
+  if (startCh) startCh.classList.add('visible');
+
+  // 清理（若页面被卸载）
+  window.addEventListener('beforeunload', () => {
+    if (rafId) cancelAnimationFrame(rafId);
+  });
+
+})();
+</script>
+</body>
+</html>

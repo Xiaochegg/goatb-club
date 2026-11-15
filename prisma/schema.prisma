@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  avatarUrl      String?
+  tiers          String   @default("{}")          // JSON: { SHIELD: "HT1", CRYSTAL: "LT2", ... }
+  overrideScores String   @default("{}")          // JSON: { SHIELD: null, CRYSTAL: 99, ... }
+  stats          String   @default("{}")          // JSON: { SHIELD: { kills:0, deaths:0, wins:0, matches:0 }, ... }
+  likes          Int      @default(0)
+  emotionText    String?                           // 感动榜 description
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // 玩家自助注册登录（方案 A）——可选字段，null = 未注册（匿名条目）
+  // 积分/段位/战绩仍由管理员操作，玩家只能登录认领自己的条目
+  email          String?  @unique                 // 注册邮箱
+  passwordHash   String?                           // scrypt 哈希（复用 src/lib/password.ts）
+  role           String   @default("PLAYER")       // PLAYER（默认）| ADMIN（预留）
+  lastLoginAt    DateTime?                          // 末次登录
+  // UNIFIED ACCOUNT V1 P1（工单 2026-11-10，管理员批复）：邮箱验证时刻。
+  // null = 未验证。存量账号【不 backfill】（其邮箱从未经过验证流程，标记为已验证
+  // = 虚假陈述，违反工单「不得假装」红线）；登录不设验证门槛。
+  // AUTH V2.0 PHASE 3（工单 2026-11-10）：邮件依赖整体取消，本字段保留历史值
+  // 原样不再新增写入（验证流程已退役，台账 R2-1）。
+  emailVerifiedAt DateTime?
+
+  // ── AUTH V2.0 PHASE 3（工单 2026-11-10/11：管理员密码重置系统）纯增量列 ──
+  // sessionEpoch：会话纪元。管理员重置密码 / 禁用账号时 +1，使该玩家全部
+  //   既有 HMAC 会话签名值立即失效（工单三「支持撤销旧会话」）。
+  //   实现路径：epoch 绑入签名输入（HMAC("id|epoch")），Cookie 外在格式
+  //   不变（id.mac32），前端零改动——HMAC 签名体兼容演进（见批次报告专章）。
+  sessionEpoch       Int      @default(0)
+  // mustChangePassword：管理员重置出临时密码后置 true；玩家登录后前端强制
+  //   改密（工单三「首次登录后强制修改」），change-password 成功后清除。
+  mustChangePassword Boolean  @default(false)
+  // disabledAt：账号禁用时刻（null=正常）。禁用=登录拦截 403 + 会话校验拒绝
+  //   （旧会话即使签名有效也视为未登录，工单 Phase 5「账号禁用后的访问阻断」
+  //   在本阶段一并落地）；恢复=置 null。仅适用于 passwordHash 非空的真实账号。
+  disabledAt         DateTime?
+  // passwordResetAt：最近一次管理员重置该账号密码的时刻（工单二「查看密码重置时间」）。
+  passwordResetAt    DateTime?
+
+  // D-phase relations
+  rankSnapshots  RankSnapshot[]
+  // PLAYER IDENTITY ENGINE V1.0：视觉配置（一对一；玩家删除级联清理）
+  visualConfig   PlayerVisualConfig?
+}
+
+model Config {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @default("")
+}
+
+model OperationLog {
+  id          String   @id @default(cuid())
+  type        String                               // "create", "update", "delete", "import", "recalc", "purge", "CLAIM"
+  detail      String                               // "admin → player · mode (old→new)"
+  scoreChange String?                              // "+50" or "-30"
+  adminKey    String?
+  // D-phase audit enhancement (spec §18): before/after/ip/sessionId
+  beforeData  String?                              // JSON snapshot of entity before mutation
+  afterData   String?                              // JSON snapshot of entity after mutation
+  ip          String?
+  sessionId   String?
+  createdAt   DateTime @default(now())
+  // 认领机制（claim-mechanism）：仅 type="CLAIM" 使用，其他 type 为 null
+  // 审批语义：append-only → 状态流转（改 status，不删记录）
+  actorId     String?                              // 发起者（已登录 Player.id，Player 即账号）
+  playerId    String?                              // 被认领目标（匿名条目 Player.id）
+  status      String?                              // pending | approved | rejected
+  updatedAt   DateTime?                            // 审批时更新（存量日志行为 null = 未流转）
+
+  @@index([type, status])
+}
+
+// ============================================================
+// D-phase tables (spec §19, §9, §10)
+// ============================================================
+
+/// Admin users with role-based access control (spec §19).
+/// Replaces the env-password single-role auth.
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("VIEWER")         // OWNER | ADMIN | MODERATOR | VIEWER
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // ── AUTH V2.0 PHASE 4（管理员批示「p4」2026-11-11）：管理员轨接入统一会话底座 ──
+  // sessionEpoch：会话纪元（镜像 Player.sessionEpoch，PHASE 3 引入的统一机制）。
+  //   绑入 HMAC 签名输入（HMAC("id|epoch")），任何未来凭证事件将该值 +1 即可
+  //   撤销该管理员全部既有会话（能力就绪；本批无事件源，恒 0 = 行为与接线前
+  //   逐字节等效，见 docs/PLAN-auth-v2-phase4-admin-unified-session-2026-11-11.md D-1/D-2）。
+  //   纯增量列（默认 0），不改列/不删列/零索引变更（迁移风险 R1 安全）。
+  sessionEpoch Int      @default(0)
+}
+
+/// AUTH V2.0 会话安全中心（批示「并行完成」2026-11-11）：登录设备台账（纯增量新表）。
+/// 仅玩家轨写入（管理员轨登录审计已入 OperationLog，SC-D1）；不加索引（R6：表极小），
+/// 不建 FK（R7 现模式）；玩家删除后留痕（append-only 审计语义）；不回填历史（不虚构）。
+/// sessMark 为 32-hex 展示标记（beclub_sess cookie 同值），非凭证、不参与验签，泄露无害。
+model SessionLedger {
+  id          String   @id @default(cuid())
+  subjectType String
+  subjectId   String
+  ip          String?
+  userAgent   String?
+  sessMark    String?
+  createdAt   DateTime @default(now())
+}
+
+/// Competitive seasons (spec §10). Only one season should be ACTIVE at a time.
+model Season {
+  id        String   @id @default(cuid())
+  name      String   @unique                        // "Season 01"
+  startAt   DateTime
+  endAt     DateTime?
+  status    String   @default("UPCOMING")          // UPCOMING | ACTIVE | ENDED
+  createdAt DateTime @default(now())
+}
+
+/// Periodic rank snapshots for rank-history charts (spec §9).
+/// Replaces the fake getRankChange() hash. A cron/manual trigger writes
+/// one row per (player, mode) periodically; diffing consecutive rows
+/// yields the real rank delta.
+model RankSnapshot {
+  id        String   @id @default(cuid())
+  playerId  String
+  mode      String                                   // TOTAL | SHIELD | CRYSTAL | ...
+  rank      Int
+  score     Int
+  seasonId  String?                                  // optional season scoping
+  createdAt DateTime @default(now())
+
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, mode, createdAt])
+  @@index([mode, createdAt])
+}
+
+// ============================================================
+// W1 · API 防护表 (工作流 W1-T3 / W4-T4)
+// ============================================================
+// 只存哈希，明文 key 仅在签发瞬间返回一次。
+// 吊销 = status='REVOKED'；过期 = expiresAt < now。
+// originAllow 为 JSON 数组字符串 ['https://a.com','https://b.com']，空数组=不限。
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String                                   // 人类可读标签
+  keyHash     String   @unique                         // sha256(明文 key) hex
+  keyPrefix   String                                   // 明文前 8 位，用于 UI 展示 "sk-xxxx..."
+  originAllow String   @default("[]")                  // JSON 数组
+  quota       Int      @default(1000)                  // 每日配额（WHITELIST 模式按 Key）
+  scopes      String   @default("leaderboard.read")    // W4: 权限范围，逗号分隔，默认只读榜单
+  status      String   @default("ACTIVE")              // ACTIVE | REVOKED
+  expiresAt   DateTime?                                // null = 永不过期
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+
+  @@index([status])
+  @@index([keyHash])
+}
+
+// ============================================================
+// TIER_RECORD_RECOGNITION_REBUILD_V1（管理员批复 2026-11-09「批准」）
+// ------------------------------------------------------------
+// 工单归档台账：玩家名称优先识别 + 完全相同才合并 + 幂等自动归档 +
+// 玩家确认机制。只增不改：现有表/字段/评分公式零改动；
+// 两张新表为纯增量，可整体 drop 回滚（Phase 2 预案已批）。
+// 信源 = 收集表 d5roro（决策点 1-A）；整理表 y344e4 现行 sync 通道不变。
+// ============================================================
+
+/// 工单归档台账主表（一条 = 一条来源行；跨同步幂等 by rowFingerprint：
+/// 同一来源行重复同步十次仅产生一次合并增量，绝不重复累计）
+model TierTicketRecord {
+  id             String    @id @default(cuid())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // ── 来源与幂等 ──
+  batchId        String                       // 首次入库批次（TierSyncBatch.id）
+  docId          String                       // 腾讯文档 id（DUExqcGxpT1NzcFFX）
+  tabId          String                       // 工作表 id（d5roro）
+  sourceRow      Int                          // sheet 行号（1 = 第一条数据行）
+  rowFingerprint String    @unique            // 行指纹 v3（DB 层幂等硬保证）
+
+  // ── 原始值（13 物理列原样存证；原始值永不被破坏）──
+  rawCellsJson   String                       // 全部物理列原始格文本 JSON 数组
+  submitterRaw   String
+  submittedAtRaw String
+  projectRaw     String
+  testDateRaw    String
+  examinerRaw    String                       // E 列 考核员游戏id+段位标注（原文）
+  testeeRaw      String                       // F 列 测试者游戏id+原tier标注（原文）
+  testTierRaw    String                       // G 列 测试tier（原文）
+  testerWinsRaw  String                       // H 列 测试者胜场（原文）
+  assessorWinsRaw String                      // I 列 考核员胜场（原文）
+  reviewRaw      String                       // J 列 测试评价（原文）
+
+  // ── 标准化值（与原始值双存；仅用于比较/分组，不回写原文）──
+  submitterNorm  String
+  submittedAtIso String?
+  testDateIso    String?                      // naive ISO '2026-11-03T00:00:00'
+  examinerId     String                       // E 列防御拆分后游戏 ID
+  examinerTierCand String?                    // 考核员段位候选（advisory）
+  testeeId       String                       // F 列防御拆分后游戏 ID（主分组键）
+  testeeTierCand String?
+  testTierNorm   String?                      // G 列词表归一化；null = 词表外（待核对）
+  testerWins     Int?                         // H 列数值；null = 缺失（绝不补 0）
+  assessorWins   Int?                         // I 列数值；null = 缺失（绝不补 0）
+  reviewNorm     String
+
+  // ── 完全重复合并（业务字段全部一致才合并；任一不同 = 独立记录）──
+  bizKey         String                       // 标准化业务键哈希（同键多条 → 首条为保留行）
+  mergeState     String    @default("UNIQUE") // UNIQUE（保留行）| MERGED_DUPLICATE（并入保留行）
+  mergedIntoId   String?                      // MERGED_DUPLICATE → 保留行 id
+  dupSourceCount Int       @default(1)        // 保留行承载的来源行数（含自身）
+  dupSourcesJson String    @default("[]")     // 保留行聚合的全部来源摘要（行号/指纹/提交者/提交时间）
+
+  // ── 玩家识别（玩家名称优先；提交者仅审计，永不作分组/排序主键）──
+  matchState     String    @default("NOT_FOUND") // MATCHED | NOT_FOUND | NAME_AMBIGUOUS | UNCERTAIN
+  matchedPlayerId String?                      // 唯一匹配时；歧义/未命中恒 null（绝不自动创建）
+  suspectGarbage Boolean   @default(false)    // 疑似垃圾行（进待核对，绝不自动删除）
+
+  // ── 生命周期（管理员十态的载体）──
+  processState   String    @default("SYNCED") // SYNCED | PENDING_REVIEW(待核对) | READY(待归档) | ARCHIVED(已归档) | ARCHIVE_FAILED(同步失败)
+  confirmState   String    @default("NONE")   // NONE | PLAYER_PENDING(待玩家确认) | CONFIRMED(已确认) | DISPUTED(有异议)
+  confirmedAt    DateTime?
+  disputedAt     DateTime?
+  disputeReason  String?
+  approveRefJson String?                       // 归档写入标记（at/by/tier/mode/playerId/logId，结构同 TierApprovedRef）
+  exemptNoConfirm Boolean  @default(false)     // 无确认通道豁免（决策点 3-A，留痕）
+  exemptNote     String?                       // 豁免原因（如「玩家未注册」）
+
+  @@index([processState, confirmState])
+  @@index([bizKey])
+  @@index([testeeId, testDateIso])
+}
+
+/// 同步批次日志（每次 ingest 一条，全量可追溯；失败重试安全）
+model TierSyncBatch {
+  id             String   @id @default(cuid())
+  fetchedAt      DateTime
+  docId          String
+  tabId          String
+  docRowCount    Int                         // 文档数据行总数（含墓碑/垃圾行）
+  validRows      Int                         // 非墓碑有效解析行
+  tombstoneRows  Int                         // 整行墓碑（已删除标记行，跳过并留数）
+  garbageRows    Int                         // 疑似垃圾行（进待核对，不删除）
+  newRecords     Int                         // 本次新建台账记录数
+  mergedDupes    Int                         // 本次命中「同业务内容不同来源行」合并数
+  idempotentHits Int                         // 幂等命中（rowFingerprint 已存在，计数不写）
+  stateJson      String                      // warnings 全文（批次审计）
+  ok             Boolean                     // 批次成功/失败（失败 = 同步失败十态依据）
+  createdAt      DateTime @default(now())
+}
+
+// ============================================================
+// 赞助祝福语（工单 2026-11-09：赞助弹窗右下角「送祝福」→ 后台可查）
+// ------------------------------------------------------------
+// 动机（管理员原话）：以免外界说「圈钱」——用户可在赞助弹窗写祝福话语，
+// 提交进后台，管理员可见。
+// 纯增量新表，不碰任何现有表；回滚 = drop 本表（零连带影响）。
+// status 仅 NEW | READ 两态（append-only 语义：管理员标已读/删除）。
+// ============================================================
+
+/// 玩家祝福语（赞助弹窗提交；公开写入 / 管理员读改删）
+model SponsorBlessing {
+  id        String   @id @default(cuid())
+  content   String                          // 祝福内容（1..100 字，trim 后存储）
+  nickname  String?                         // 可选署名（≤20 字；null = 匿名）
+  ip        String?                         // 提交来源 IP（限流+审计，惯例同 OperationLog.ip）
+  status    String   @default("NEW")        // NEW（未读）| READ（已读）
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([ip, createdAt])
+}
+
+// ============================================================
+// UNIFIED ACCOUNT V1 · P1（工单 2026-11-10）：认证令牌表（纯增量，可整体 drop 回滚）
+// ------------------------------------------------------------
+// 设计（P0-C 设计稿 C2/C3，管理员批复采纳）：
+//   - 令牌 = crypto.randomBytes(32) base64url（256 位熵）；
+//   - 本表【只存 SHA-256 哈希】，明文令牌仅存在于邮件链接，绝不入库/入日志；
+//   - 一次性：消费 = 按 tokenHash 原子 DELETE，删除成功即消费成功；
+//   - 限时：expiresAt 到期即无效（验证 24h；P2 重置 30min 复用本表）；
+//   - 不建 FK（playerId 为应用层校验普通字符串，惯例同 PvpChallenge，
+//     删除玩家/清理不受级联约束）。
+// ============================================================
+
+/// 认证令牌（邮箱验证 / 后续阶段：密码重置；type 词表内区分）
+model AuthToken {
+  id        String   @id @default(cuid())
+  playerId  String                       // 应用层关联 Player.id
+  type      String                       // EMAIL_VERIFY（P2 扩展 PASSWORD_RESET）
+  tokenHash String   @unique             // sha256(token) hex —— 明文永不入库
+  expiresAt DateTime
+  ip        String?                      // 签发来源 IP（审计，惯例同 OperationLog.ip）
+  createdAt DateTime @default(now())
+
+  @@index([playerId, type])
+}
+
+// ============================================================
+// UNIFIED ACCOUNT V1 · P1（工单 2026-11-10）：邮件出站台账（纯增量，可整体 drop 回滚）
+// ------------------------------------------------------------
+// 诚实性红线（工单 §四「不得把邮件已受理显示为已送达」）：
+//   status 词表严格区分「Brevo 受理」与「最终投递」：
+//   QUEUED（待发）→ ACCEPTED（Brevo 受理，含 messageId）｜FAILED（被拒/超时）
+//   ｜NOT_CONFIGURED（邮件系统未配置，绝不假装发送）；
+//   「已投递/退信/拦截」等供应商侧终态由 P2+ 起经 Brevo events API 回查后另列，
+//   本表绝不自行推测投递结果。
+// ============================================================
+
+/// 邮件出站台账（发送审计 + 管理员状态卡数据源）
+model EmailOutbox {
+  id             String   @id @default(cuid())
+  kind           String                       // VERIFY_EMAIL（P2: PASSWORD_RESET / SECURITY_NOTICE）
+  toEmail        String
+  subject        String
+  status         String   @default("QUEUED")  // QUEUED|ACCEPTED|FAILED|NOT_CONFIGURED
+  brevoMessageId String?                      // Brevo 受理返回的 messageId（仅 ACCEPTED）
+  error          String?                      // 失败原因（截断，绝不含凭证）
+  playerId       String?                      // 关联玩家（可空：审计）
+  ip             String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([toEmail, createdAt])
+}
+
+// ============================================================
+// 约 PVP（工单 2026-11-10：约战请求与正式比赛严格分离）
+// ------------------------------------------------------------
+// V1.0 任务书核心约束落地：
+//   - pending/accepted 等约战状态绝不写入 Player.stats（正式 matches/K/D/胜场
+//     仍只由管理员既有流程操作）；本表是独立数据归属，回滚 = drop 本表零连带；
+//   - 不建 FK 关系（challengerId/opponentId 为应用层校验的普通字符串）：
+//     写入时服务端验证双方身份存在且合法，删除玩家/测试清理不受级联约束；
+//   - 幂等：requestId 唯一（客户端 UUID），同一请求 ID 绝不产生两张工单；
+//   - 状态机：pending → accepted|rejected|cancelled|expired|failed（单向，respondAt/closedAt 留痕）。
+// ============================================================
+
+// ============================================================
+// PLAYER IDENTITY ENGINE V1.0（管理员批示「通过」2026-11-12 trace 1a1cfcfc32dceef1）
+// ------------------------------------------------------------
+// 玩家视觉身份系统：三张纯增量新表，不碰任何现有表/列/评分逻辑。
+// 回滚 = drop 三表（零连带影响）。
+// SQLite 无 Prisma Json → config 列一律 String(JSON)，
+// 服务端白名单校验 + ≤16KB 限制（schema.ts sanitizeVisualConfig）。
+// ============================================================
+
+/// 共享视觉预设模板（只存受控配置参数与动画编排，绝无可执行代码）。
+/// 一个预设可被多个玩家使用；玩家独立覆盖参数不反向改变预设。
+model VisualPreset {
+  id          String   @id @default(cuid())
+  name        String   @unique                        // ≤40 字，白名单校验
+  description String?                                 // ≤120 字
+  config      String                                  // JSON（sanitizeVisualConfig 白名单）
+  isBuiltin   Boolean  @default(false)                // 内置预设（种子数据，可编辑不可删）
+  createdBy   String                                  // AdminUser.username
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // PLAYER IDENTITY ENGINE V1.0：使用此预设的玩家配置（SetNull：预设删除不删玩家配置）
+  playerConfigs PlayerVisualConfig[]
+}
+
+/// 玩家独立视觉配置（playerId 关联既有稳定 Player.id，绝不重新生成）。
+/// draftConfig = 管理端编辑中的草稿（玩家侧不可见）；
+/// config      = 已发布生效配置（玩家侧唯一读取源）。
+/// status: DRAFT_ONLY（仅草稿，玩家走继承链）| PUBLISHED（草稿=发布）| DIRTY（草稿领先于发布）。
+/// 三级继承：Individual > GroupPreset(presetId) > Global(Config.visual_global_default)。
+model PlayerVisualConfig {
+  id          String   @id @default(cuid())
+  playerId    String   @unique
+  presetId    String?
+  enabled     Boolean  @default(true)
+  draftConfig String   @default("{}")
+  config      String   @default("{}")
+  status      String   @default("DRAFT_ONLY")         // DRAFT_ONLY | PUBLISHED | DIRTY
+  version     Int      @default(0)                    // 发布次数；发布 +1
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  player Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  preset VisualPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+}
+
+/// 视觉配置发布历史（append-only 审计；不建 FK，玩家删除后留痕）。
+/// 回滚 = 取历史快照作为新草稿发布（产生新版本号，绝不覆盖历史行）。
+model VisualRevision {
+  id             String   @id @default(cuid())
+  playerId       String?                              // 玩家配置快照
+  presetId       String?                              // 预设快照
+  version        Int
+  configSnapshot String
+  changedBy      String
+  changeSummary  String?
+  createdAt      DateTime @default(now())
+
+  @@index([playerId, version])
+  @@index([presetId, version])
+}
+
+/// 玩家约战请求（pending 等待回应 → 终态；接受后仍不进正式战绩）
+model PvpChallenge {
+  id              String    @id @default(cuid())
+  requestId       String    @unique            // 幂等键（客户端生成 UUID）
+  challengerId    String                       // 发起方 Player.id（应用层校验）
+  opponentId      String                       // 对手 Player.id（应用层校验；=发起方拒绝）
+  modeId          String                       // 模式 ID（constants.ALL_MODES 词表内）
+  scheduledAt     DateTime                     // 预约时间（UTC 存储）
+  timezone        String                       // 发起方 IANA 时区（如 Asia/Riyadh）
+  tzOffsetMinutes Int                          // 创建时本地 UTC 偏移（分钟，还原展示用）
+  notes           String?                      // 备注（≤100 字，trim 后存储）
+  status          String    @default("pending") // pending|accepted|rejected|cancelled|expired|failed
+  respondAt       DateTime?                    // 对方回应时刻（接受/拒绝）
+  closedAt        DateTime?                    // 终态时刻（拒绝/取消/过期）
+  ip              String?                      // 发起来源 IP（审计）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([challengerId, status])
+  @@index([opponentId, status])
+  @@index([status, scheduledAt])
+}

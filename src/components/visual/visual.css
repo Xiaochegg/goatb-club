@@ -1,0 +1,295 @@
+/* ============================================================
+   PLAYER IDENTITY ENGINE V1.0 — 十种视觉动画引擎样式
+   （trace 1a1cfcfc32dceef1 批示「通过」2026-11-12）
+   ------------------------------------------------------------
+   性能红线（任务书 §十四）：
+   - 全部动画只用 transform / opacity / clip-path / filter / background-position
+   - 无 canvas、无 JS 逐帧；环境层为低频 CSS 循环
+   - 页面隐藏 .vx-hidden 下 animation-play-state: paused
+   - prefers-reduced-motion / STATIC → 全部动画禁用（保留静态外观）
+   命名：vx-* （visual effects）；组件内联变量传参：
+   --vxd duration, --vxe easing, --vx-delay delay,
+   --vx-opacity, --vx-scale, --vx-radius, --vx-origin,
+   --vx-dx/--vx-dy 方向位移, --vx-inset 揭幕起点, --vx-rot 翻转角,
+   --vx-accent 主色 token 解析值
+   ============================================================ */
+
+/* ── 主色 token（白名单映射，见 types.ts ACCENT_TOKENS）── */
+.vx-accent-inherit  { --vx-accent: rgba(255,255,255,.55); }
+.vx-accent-jade     { --vx-accent: var(--jade-500, #34d399); }
+.vx-accent-gold     { --vx-accent: #e8c268; }
+.vx-accent-crimson  { --vx-accent: #f87171; }
+.vx-accent-violet   { --vx-accent: #c084fc; }
+.vx-accent-cyan     { --vx-accent: #22d3ee; }
+.vx-accent-amber    { --vx-accent: #fbbf24; }
+
+/* ── 通用入场容器：终态为基准态，动画 fill both ── */
+.vx-anim {
+  animation-duration: var(--vxd, 700ms);
+  animation-timing-function: var(--vxe, cubic-bezier(0.22, 1, 0.36, 1));
+  animation-delay: var(--vx-delay, 0ms);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+/* ═══ 01 PRISM 棱镜玻璃 ═══ */
+@keyframes vx-prism-in {
+  0%   { opacity: 0; filter: blur(16px) saturate(1.9) brightness(1.5); transform: scale(calc(1 + 0.08 * var(--vxi, .6))); }
+  55%  { opacity: 1; }
+  100% { opacity: var(--vx-opacity, 1); filter: blur(0) saturate(1) brightness(1); transform: scale(var(--vx-scale, 1)); }
+}
+.vx-prism { animation-name: vx-prism-in; }
+/* 棱镜边缘折射高光：一次性扫过（入场期）*/
+@keyframes vx-prism-sheen {
+  0%   { transform: translateX(-140%) skewX(-16deg); opacity: 0; }
+  18%  { opacity: .9; }
+  100% { transform: translateX(240%) skewX(-16deg); opacity: 0; }
+}
+.vx-sheen {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit;
+}
+.vx-sheen::after {
+  content: ''; position: absolute; top: -20%; bottom: -20%; width: 34%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.34), transparent);
+  animation: vx-prism-sheen var(--vxd, 700ms) var(--vxe, ease-out) var(--vx-delay, 0ms) both;
+}
+/* PRISM 常驻环境：每 7s 一次极轻掠光 */
+.vx-ambient-prism .vx-sheen::after { animation: vx-prism-sheen 2.4s ease-out 0s both, vx-prism-sheen-loop 7s ease-in-out calc(var(--vxd, 700ms) + 1s) infinite; }
+@keyframes vx-prism-sheen-loop { 0%, 88% { transform: translateX(-140%) skewX(-16deg); opacity: 0; } 94% { opacity: .35; } 100% { transform: translateX(240%) skewX(-16deg); opacity: 0; } }
+
+/* ═══ 02 PORTAL 空间传送 ═══ */
+@keyframes vx-portal-in {
+  0%   { clip-path: circle(0% at var(--vx-origin, 50% 50%)); opacity: .35; transform: scale(calc(1 + 0.10 * var(--vxi, .6))); filter: blur(8px); }
+  55%  { opacity: 1; filter: blur(0); }
+  100% { clip-path: circle(125% at var(--vx-origin, 50% 50%)); opacity: var(--vx-opacity, 1); transform: scale(var(--vx-scale, 1)); }
+}
+.vx-portal { animation-name: vx-portal-in; }
+/* 分层入口光圈（一次性） */
+@keyframes vx-portal-ring {
+  0%   { opacity: .8; transform: scale(.2); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.vx-portal-ring {
+  position: absolute; inset: -4px; border-radius: inherit; pointer-events: none;
+  border: 1.5px solid var(--vx-accent, rgba(255,255,255,.5));
+  animation: vx-portal-ring var(--vxd, 700ms) ease-out var(--vx-delay, 0ms) both;
+}
+
+/* ═══ 03 HOLOGRAM 全息投影 ═══ */
+@keyframes vx-holo-in {
+  0%   { opacity: 0; transform: translateY(calc(8px * var(--vxi, .6))); filter: brightness(1.9) contrast(1.25) saturate(.7); }
+  9%   { opacity: .55; }
+  13%  { opacity: .08; }
+  22%  { opacity: .85; }
+  30%  { opacity: .3; }
+  42%  { opacity: 1; filter: brightness(1.05); }
+  100% { opacity: var(--vx-opacity, 1); transform: translateY(0) scale(var(--vx-scale, 1)); filter: brightness(1) contrast(1) saturate(1); }
+}
+.vx-hologram { animation-name: vx-holo-in; }
+/* 扫描线层 */
+@keyframes vx-holo-scan { 0% { transform: translateY(-110%); } 100% { transform: translateY(420%); } }
+.vx-scanlines { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+.vx-scanlines::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 26%;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--vx-accent, #22d3ee) 30%, transparent), transparent);
+  animation: vx-holo-scan var(--vxd, 900ms) linear var(--vx-delay, 0ms) both;
+  mix-blend-mode: screen;
+}
+/* HOLOGRAM 常驻环境：慢速扫描 + 科技边缘 */
+.vx-ambient-hologram .vx-scanlines::before { animation: vx-holo-scan 3.6s linear infinite; opacity: .5; }
+.vx-ambient-hologram { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vx-accent, #22d3ee) 22%, transparent); }
+
+/* ═══ 04 AURORA 极光流动 ═══ */
+@keyframes vx-aurora-in {
+  0%   { opacity: 0; filter: blur(10px); transform: translateY(calc(12px * var(--vxi, .6))); }
+  100% { opacity: var(--vx-opacity, 1); filter: blur(0); transform: translateY(0) scale(var(--vx-scale, 1)); }
+}
+.vx-aurora { animation-name: vx-aurora-in; }
+/* 极光流层（多色柔和过渡，随 --vx-accent 变化） */
+@keyframes vx-aurora-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.vx-aurora-flow {
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: -1;
+  background: linear-gradient(115deg,
+    color-mix(in srgb, var(--vx-accent, #34d399) 16%, transparent),
+    rgba(255,255,255,.05) 30%,
+    color-mix(in srgb, var(--vx-accent, #34d399) 8%, transparent) 55%,
+    rgba(255,255,255,.07) 80%,
+    color-mix(in srgb, var(--vx-accent, #34d399) 14%, transparent));
+  background-size: 300% 300%;
+  animation: vx-aurora-flow var(--vxa, 9s) ease-in-out infinite;
+}
+/* AURORA 入场期一次性强流动（后接无限慢流） */
+.vx-aurora .vx-aurora-flow { animation: vx-aurora-flow 2.2s ease-in-out 1, vx-aurora-flow var(--vxa, 9s) ease-in-out 2.2s infinite; }
+
+/* ═══ 05 ORBIT 轨道环绕 ═══ */
+@keyframes vx-orbit-in {
+  0%   { opacity: 0; transform: scale(calc(.86 + .08 * var(--vxi, .6))); filter: blur(6px); }
+  100% { opacity: var(--vx-opacity, 1); transform: scale(var(--vx-scale, 1)); filter: blur(0); }
+}
+.vx-orbit { animation-name: vx-orbit-in; }
+@keyframes vx-orbit-spin { to { transform: rotate(360deg); } }
+.vx-orbit-rings { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }
+.vx-orbit-rings::before, .vx-orbit-rings::after {
+  content: ''; position: absolute; border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--vx-accent, #34d399) 40%, transparent);
+}
+.vx-orbit-rings::before { inset: -7px; animation: vx-orbit-spin var(--vxa, 12s) linear infinite; border-style: dashed; }
+.vx-orbit-rings::after  { inset: -13px; opacity: .5; animation: vx-orbit-spin calc(var(--vxa, 12s) * -1.6) linear infinite; }
+/* 轨道点缀：环上一颗小卫星 */
+.vx-orbit-dot {
+  position: absolute; inset: -7px; pointer-events: none; border-radius: 50%;
+  animation: vx-orbit-spin var(--vxa, 12s) linear infinite;
+}
+.vx-orbit-dot::before {
+  content: ''; position: absolute; top: -2.5px; left: 50%; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--vx-accent, #34d399); box-shadow: 0 0 8px var(--vx-accent, #34d399);
+}
+
+/* ═══ 06 PARTICLE 粒子构成 ═══ */
+@keyframes vx-particle-in {
+  0%   { opacity: 0; transform: translate(var(--px0, -20px), var(--py0, -14px)) scale(.4); }
+  60%  { opacity: .9; }
+  100% { opacity: 0; transform: translate(0, 0) scale(1); }
+}
+@keyframes vx-particle-float {
+  0%, 100% { transform: translate(0, 0); opacity: .35; }
+  50%      { transform: translate(var(--pdx, 3px), var(--pdy, -6px)); opacity: .8; }
+}
+.vx-particle {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: var(--vx-accent, rgba(255,255,255,.7));
+  box-shadow: 0 0 6px var(--vx-accent, rgba(255,255,255,.5));
+}
+.vx-particle-enter { animation: vx-particle-in var(--pvd, 1100ms) ease-out var(--pvdelay, 0ms) both; }
+.vx-particle-ambient { animation: vx-particle-float var(--pvt, 6s) ease-in-out var(--pvdelay, 0ms) infinite; }
+/* 主体（粒子编排时轻微汇聚浮现） */
+@keyframes vx-particle-body {
+  0%   { opacity: 0; filter: blur(7px); }
+  35%  { opacity: 0; }
+  100% { opacity: var(--vx-opacity, 1); filter: blur(0); transform: scale(var(--vx-scale, 1)); }
+}
+.vx-particle-body { animation-name: vx-particle-body; }
+.vx-particles-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+
+/* ═══ 07 LIQUID 液态变形 ═══ */
+@keyframes vx-liquid-in {
+  0%   { opacity: 0; border-radius: 58% 42% 55% 45% / 48% 58% 42% 52%; transform: scale(.9) skewX(2.5deg); filter: blur(7px); }
+  40%  { opacity: 1; }
+  68%  { border-radius: 40% 60% 44% 56% / 58% 40% 60% 42%; transform: scale(calc(var(--vx-scale, 1) * 1.015)) skewX(-1deg); }
+  100% { opacity: var(--vx-opacity, 1); border-radius: var(--vx-radius, 16px); transform: scale(var(--vx-scale, 1)) skewX(0); filter: blur(0); }
+}
+.vx-liquid { animation-name: vx-liquid-in; }
+/* LIQUID 常驻环境：边角极慢呼吸 */
+@keyframes vx-liquid-breathe {
+  0%, 100% { border-radius: var(--vx-radius, 16px); }
+  50%      { border-radius: calc(var(--vx-radius, 16px) * 1.35) calc(var(--vx-radius, 16px) * .8); }
+}
+.vx-ambient-liquid { animation: vx-liquid-breathe 7s ease-in-out infinite; }
+
+/* ═══ 08 DIMENSION 空间翻转 ═══ */
+@keyframes vx-dimension-in {
+  0%   { opacity: 0; transform: perspective(900px) rotateY(var(--vx-rot, 55deg)) translateZ(-90px) scale(.94); filter: blur(4px); }
+  55%  { opacity: 1; filter: blur(0); }
+  100% { opacity: var(--vx-opacity, 1); transform: perspective(900px) rotateY(0) translateZ(0) scale(var(--vx-scale, 1)); }
+}
+.vx-dimension { animation-name: vx-dimension-in; backface-visibility: hidden; }
+
+/* ═══ 09 REVEAL 分层揭幕 ═══ */
+@keyframes vx-reveal-in {
+  0%   { clip-path: inset(var(--vx-inset, 0 100% 0 0)); opacity: .001; }
+  1%   { opacity: 1; }
+  100% { clip-path: inset(0 0 0 0); opacity: var(--vx-opacity, 1); }
+}
+.vx-reveal { animation-name: vx-reveal-in; }
+/* 揭幕光缘（随揭幕方向移动的细光线，一次性） */
+@keyframes vx-reveal-edge {
+  0%   { opacity: .9; transform: var(--vx-edge-from, translateX(-100%)); }
+  100% { opacity: 0; transform: var(--vx-edge-to, translateX(0)); }
+}
+.vx-reveal-edge {
+  position: absolute; pointer-events: none; z-index: 2;
+  background: linear-gradient(90deg, transparent, var(--vx-accent, rgba(255,255,255,.75)), transparent);
+  animation: vx-reveal-edge var(--vxd, 700ms) var(--vxe, ease-out) var(--vx-delay, 0ms) both;
+}
+
+/* ═══ 10 PHOTON 光子扫掠 ═══ */
+@keyframes vx-photon-in {
+  0%   { opacity: 0; filter: brightness(.35) contrast(1.3); transform: translateX(calc(var(--vx-ph, -1) * 14px * var(--vxi, .6))); }
+  30%  { opacity: 1; }
+  100% { opacity: var(--vx-opacity, 1); filter: brightness(1) contrast(1); transform: translateX(0) scale(var(--vx-scale, 1)); }
+}
+.vx-photon { animation-name: vx-photon-in; }
+/* 光束扫过层 */
+@keyframes vx-photon-sweep {
+  0%   { transform: translateX(calc(var(--vx-ph, -1) * -150%)) skewX(-18deg); opacity: 0; }
+  22%  { opacity: 1; }
+  100% { transform: translateX(calc(var(--vx-ph, -1) * 250%)) skewX(-18deg); opacity: 0; }
+}
+.vx-photon-beam {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit;
+}
+.vx-photon-beam::after {
+  content: ''; position: absolute; top: -20%; bottom: -20%; width: 30%;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--vx-accent, #e8c268) 55%, rgba(255,255,255,.35)), transparent);
+  animation: vx-photon-sweep var(--vxd, 900ms) var(--vxe, ease-out) var(--vx-delay, 0ms) both;
+}
+/* PHOTON 常驻环境：边缘呼吸点亮 */
+@keyframes vx-photon-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px transparent, 0 0 0 transparent; }
+  50%      { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vx-accent, #e8c268) 28%, transparent), 0 0 14px color-mix(in srgb, var(--vx-accent, #e8c268) 18%, transparent); }
+}
+.vx-ambient-photon { animation: vx-photon-pulse 5s ease-in-out infinite; }
+
+/* ═══ 形状系统（任务书 §六） ═══ */
+.vx-shape-circle   { border-radius: 50% !important; }
+.vx-shape-ellipse  { border-radius: 50% !important; }
+.vx-shape-hexagon  { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+/* ROUNDED_RECT / CUSTOM_RADIUS 由内联 border-radius 承接 */
+
+/* ═══ 交互反馈（任务书 Layer 04） ═══ */
+.vx-interaction { transition: transform .28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow .28s ease, filter .28s ease; }
+.vx-ia-lift:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+.vx-ia-glow:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--vx-accent, #fff) 35%, transparent), 0 0 22px color-mix(in srgb, var(--vx-accent, #fff) 22%, transparent); }
+.vx-ia-tilt:hover { transform: perspective(700px) rotate3d(1, -1, 0, 4deg); }
+.vx-ia-tilt { transform-style: preserve-3d; }
+
+/* ═══ 真实事件反馈特效（任务书 §十一） ═══ */
+@keyframes vx-event-pop {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(calc(1 + .06 * var(--vxi, .7))); filter: brightness(1.35); }
+  60%  { transform: scale(calc(1 - .02 * var(--vxi, .7))); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes vx-event-flash {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vx-accent, #fff) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.vx-event-fx { animation: vx-event-pop var(--vxd, 900ms) cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.vx-event-fx-ring { animation: vx-event-flash var(--vxd, 900ms) ease-out both; border-radius: inherit; }
+
+/* ═══ 性能分级（任务书 §十四） ═══ */
+/* LITE：关闭环境层与重滤镜（引擎同时不再渲染环境 DOM） */
+.vx-perf-lite .vx-aurora-flow, .vx-perf-lite .vx-orbit-rings, .vx-perf-lite .vx-orbit-dot,
+.vx-perf-lite .vx-scanlines, .vx-perf-lite .vx-particles-layer { display: none !important; }
+/* 页面隐藏暂停非必要动画 */
+.vx-hidden .vx-anim, .vx-hidden .vx-aurora-flow, .vx-hidden .vx-orbit-rings, .vx-hidden .vx-orbit-dot,
+.vx-hidden .vx-scanlines::before, .vx-hidden .vx-particle-ambient, .vx-hidden .vx-ambient-liquid,
+.vx-hidden .vx-ambient-photon, .vx-hidden .vx-ambient-prism .vx-sheen::after,
+.vx-hidden .vx-particle-enter { animation-play-state: paused !important; }
+/* 用户级暂停（SA-09 全局暂停动效）同样利用 .vx-hidden 机制 */
+/* prefers-reduced-motion：静态保留（管理员预设的静态视觉风格仍在，动态全关） */
+@media (prefers-reduced-motion: reduce) {
+  .vx-anim, .vx-sheen::after, .vx-portal-ring, .vx-scanlines::before,
+  .vx-aurora-flow, .vx-orbit-rings::before, .vx-orbit-rings::after, .vx-orbit-dot,
+  .vx-orbit-dot::before, .vx-particle, .vx-reveal-edge, .vx-photon-beam::after,
+  .vx-event-fx, .vx-event-fx-ring, .vx-ambient-liquid, .vx-ambient-photon {
+    animation: none !important;
+  }
+  .vx-reveal { clip-path: none !important; }
+  .vx-portal { clip-path: none !important; }
+  .vx-anim { opacity: 1 !important; filter: none !important; transform: none !important; }
+}

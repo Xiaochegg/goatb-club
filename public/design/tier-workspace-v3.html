@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-Hans-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tier 工单中心 V3.0 · 设计原型（演示数据）</title>
+<style>
+/* ============================================================
+   GOATB CLUB · Tier Workspace V3.0 设计原型
+   配套规范：docs/tier-workspace-v3/DESIGN-SPEC-V3.md
+   约束：仅页面底色一处渐变；零发光/彩色投影；语义色 ≤7；
+        全部徽章带文字；动效 transform/opacity、可打断、reduced-motion 退化。
+   本页为静态演示件：数据为虚构演示数据，非真实台账。
+   ============================================================ */
+:root{
+  --bg-a:#0b120e; --bg-b:#0e1611;
+  --card:rgba(18,26,21,.72); --card-solid:#121a15;
+  --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.15);
+  --fg:#d5e0d8; --fg-sub:#93a89a; --fg-faint:#6d7f72; --fg-mono:#9db4a4;
+  --purple:#BF5AF2; --purple-bg:rgba(191,90,242,.12); --purple-line:rgba(191,90,242,.35); --purple-text:#c98af5; --purple-text2:#d0a6f7;
+  --amber:#fbbf24; --amber-bg:rgba(251,191,36,.10); --amber-line:rgba(251,191,36,.30); --amber-text:#fcd34d;
+  --green-bg:rgba(52,211,153,.10); --green-line:rgba(52,211,153,.25); --green-text:#6ee7b7;
+  --orange-bg:rgba(251,146,60,.10); --orange-line:rgba(251,146,60,.30); --orange-text:#fdba74;
+  --sky-bg:rgba(56,189,248,.10); --sky-line:rgba(56,189,248,.25); --sky-text:#7dd3fc;
+  --r-lg:12px; --r-md:8px;
+  --sp:4px;
+  --dur-tab:260ms; --dur-expand:280ms; --dur-drawer:300ms; --dur-micro:120ms;
+  --ease-spring:cubic-bezier(.22,1.2,.36,1); --ease-out:cubic-bezier(.16,1,.3,1);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:linear-gradient(180deg,var(--bg-a) 0%,var(--bg-b) 55%,var(--bg-a) 100%);
+  color:var(--fg); font:500 14px/1.55 -apple-system,"PingFang SC","Segoe UI","Microsoft YaHei",sans-serif;
+  min-height:100vh; padding:16px 12px 32px;
+}
+.wrap{max-width:1060px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- 原型声明条（非产品 UI） ---------- */
+.proto-note{border:1px dashed var(--line-strong);border-radius:var(--r-lg);padding:8px 12px;font-size:11px;color:var(--fg-faint);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.proto-note b{color:var(--fg-sub)}
+
+/* ---------- 工作区壳 ---------- */
+.shell{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px}
+@media(min-width:768px){.shell{padding:16px}}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.head h1{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:#fff}
+.vbadge{border:1px solid var(--purple-line);background:var(--purple-bg);color:var(--purple-text2);font-size:10px;font-weight:700;letter-spacing:.08em;border-radius:999px;padding:2px 8px}
+.head .sub{margin-top:2px;font-size:11px;color:var(--fg-sub)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;border-radius:10px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:#e8f0ea;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;transition:transform var(--dur-micro) var(--ease-out),background var(--dur-micro) linear,border-color var(--dur-micro) linear}
+.btn:hover{background:rgba(255,255,255,.08)}
+.btn:active{transform:scale(.97)}
+.btn.primary{border-color:rgba(191,90,242,.4);background:rgba(191,90,242,.14);color:#d9b8fa}
+.btn.primary:hover{background:rgba(191,90,242,.24)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--purple);outline-offset:2px;border-radius:8px}
+
+/* ---------- S0 名称识别保护（黄色常驻，最高优先级） ---------- */
+.banner{border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.08);border-radius:var(--r-lg);padding:10px 14px;display:flex;gap:8px}
+.banner .ic{flex:none;color:var(--amber-text);font-size:14px;line-height:1.4}
+.banner .t1{font-size:12px;font-weight:700;color:#fde68a}
+.banner .t2{margin-top:2px;font-size:11px;color:rgba(253,230,138,.75)}
+.banner .t3{margin-top:6px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.15);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;color:#fef3c7}
+
+/* ---------- DB-1 常驻待办条（重点统计置顶） ---------- */
+.todo{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.todo .td{position:relative;text-align:left;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);padding:8px 12px;cursor:pointer;transition:border-color var(--dur-micro) linear,background var(--dur-micro) linear}
+.todo .td:hover{border-color:var(--purple-line)}
+.todo .td:active{transform:scale(.985)}
+.todo .td .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:700;line-height:1.1}
+.todo .td .l{font-size:10px;color:var(--fg-sub)}
+.todo .td .dot{position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%}
+.tone-amber{color:var(--amber-text)} .tone-purple{color:var(--purple-text2)} .tone-sky{color:var(--sky-text)} .tone-orange{color:var(--orange-text)} .tone-green{color:var(--green-text)} .tone-plain{color:#d5e0d8}
+.dot-amber{background:var(--amber)} .dot-purple{background:var(--purple)} .dot-sky{background:#38bdf8} .dot-orange{background:#fb923c}
+
+/* ---------- 页签导航（spring 滑动 pill） ---------- */
+.tabs{position:relative;display:flex;gap:4px;overflow-x:auto;border:1px solid var(--line);background:rgba(0,0,0,.25);border-radius:12px;padding:4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs .pill{position:absolute;top:4px;bottom:4px;border-radius:8px;border:1px solid var(--purple-line);background:var(--purple-bg);transition:transform var(--dur-tab) var(--ease-spring),width var(--dur-tab) var(--ease-spring)}
+.tabs button{position:relative;z-index:1;flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;border:0;background:none;color:var(--fg-sub);font:700 12px/1 inherit;padding:8px 14px;border-radius:8px;cursor:pointer;transition:color var(--dur-micro) linear}
+.tabs button[aria-selected="true"]{color:#fff}
+.tabs button:hover{color:rgba(255,255,255,.9)}
+
+/* ---------- 徽章（IA-3：全部带文字） ---------- */
+.b{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:999px;border:1px solid;padding:2px 8px;font-size:10px;font-weight:700;line-height:1.4}
+.b.purple{color:var(--purple-text);border-color:var(--purple-line);background:var(--purple-bg)}
+.b.amber{color:var(--amber-text);border-color:var(--amber-line);background:var(--amber-bg)}
+.b.green{color:var(--green-text);border-color:var(--green-line);background:var(--green-bg)}
+.b.orange{color:var(--orange-text);border-color:var(--orange-line);background:var(--orange-bg)}
+.b.sky{color:var(--sky-text);border-color:var(--sky-line);background:var(--sky-bg)}
+.b.gray{color:var(--fg-sub);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.05)}
+.b.tier{color:#d5e0d8;border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.06)}
+
+/* ---------- S1 总览：主/次两层统计 ---------- */
+.sec{display:none;flex-direction:column;gap:12px}
+.sec.on{display:flex;animation:secin var(--dur-micro) var(--ease-out)}
+@keyframes secin{from{opacity:0}to{opacity:1}}
+.stat-main{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:768px){.stat-main{grid-template-columns:repeat(4,1fr)}}
+.stat-sub{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:768px){.stat-sub{grid-template-columns:repeat(4,1fr)}}
+.stat{border:1px solid var(--line);background:var(--card);border-radius:var(--r-lg);padding:12px;display:flex;flex-direction:column;gap:4px;text-align:left;cursor:pointer;transition:border-color var(--dur-micro) linear,background var(--dur-micro) linear}
+.stat:hover{border-color:var(--purple-line);background:rgba(24,34,27,.78)}
+.stat:active{transform:scale(.985)}
+.stat .lb{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--fg-sub)}
+.stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;line-height:1}
+.stat.sub .v{font-size:18px}
+.stat .hint{font-size:10px;color:var(--fg-faint)}
+.stat.is-active{border-color:rgba(191,90,242,.5);background:rgba(191,90,242,.10)}
+.footnote{font-size:10px;line-height:1.6;color:var(--fg-faint)}
+
+/* ---------- S2 玩家工单 ---------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input[type=search],.toolbar select{min-height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.25);color:#fff;font-size:12px;padding:6px 10px}
+.toolbar input[type=search]{flex:1;min-width:170px;max-width:260px}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--purple-line);outline:none;box-shadow:0 0 0 1px var(--purple-line)}
+.count{margin-left:auto;font-size:10px;color:var(--fg-faint)}
+.tbl{border:1px solid var(--line);background:var(--card);border-radius:var(--r-lg);overflow:hidden}
+.thead,.trow{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) 54px 60px minmax(0,2.1fr) 84px 64px;gap:12px;align-items:center;padding:8px 16px}
+.thead{position:sticky;top:0;z-index:10;background:#0d1410;border-bottom:1px solid var(--line);font-size:10px;font-weight:700;color:var(--fg-faint)}
+.scroll{max-height:560px;overflow-y:auto}
+.trow{border-bottom:1px solid rgba(255,255,255,.05);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:inherit;font:inherit;cursor:pointer;padding-top:10px;padding-bottom:10px;transition:background var(--dur-micro) linear}
+.trow:hover{background:rgba(255,255,255,.03)}
+.trow .name{display:flex;align-items:center;gap:6px;min-width:0}
+.trow .name .nm{font-size:12px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:rgba(255,255,255,.9)}
+.trow .num.warn{color:var(--amber-text)}
+.trow .st{display:flex;flex-wrap:wrap;gap:4px}
+.trow .date{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:10px;color:var(--fg-mono)}
+.trow .op{justify-self:end}
+.chip{display:inline-flex;align-items:center;gap:4px;min-height:32px;border-radius:8px;border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:#c9d4cc;font-size:10px;font-weight:700;padding:4px 10px;transition:border-color var(--dur-micro) linear,color var(--dur-micro) linear}
+.trow:hover .chip,.rec:hover .chip{border-color:var(--purple-line);color:#fff}
+.chev{color:var(--fg-sub);flex:none;transition:transform var(--dur-tab) var(--ease-spring)}
+.open>.chev,.trow[aria-expanded="true"] .chev{transform:rotate(90deg)}
+
+/* 行展开（grid-rows 技法：可打断；visibility 延迟切换保证闭合内容不进 Tab 序） */
+.expand{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-expand) var(--ease-spring)}
+.expand.open{grid-template-rows:1fr}
+.expand>div{overflow:hidden;background:rgba(0,0,0,.15);visibility:hidden;transition:visibility 0s linear var(--dur-expand)}
+.expand.open>div{visibility:visible;transition:visibility 0s linear 0s}
+.recs{display:flex;flex-direction:column;gap:6px;padding:8px 14px 14px}
+.recs .cap{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--fg-faint)}
+.recs .cap .lk{color:var(--purple-text);font-weight:700;cursor:pointer}
+.rec{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid rgba(255,255,255,.05);background:rgba(12,18,14,.6);border-radius:10px;padding:7px 10px;font-size:11px}
+.rec .d{font-family:var(--mono);color:var(--fg-mono)}
+.rec .pj{flex:1;min-width:120px;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec .ex{color:var(--fg-sub)}
+.rec .src{font-size:10px;color:var(--fg-faint);border:1px dashed rgba(255,255,255,.14);border-radius:6px;padding:1px 6px}
+.kds{display:inline-flex;gap:6px}
+.kd{font-family:var(--mono);font-weight:700;border-radius:6px;border:1px solid;padding:2px 8px;font-size:10px;white-space:nowrap}
+.kd.k{color:#6ee7b7;border-color:var(--green-line);background:rgba(52,211,153,.08)}
+.kd.d{color:#fdba74;border-color:var(--orange-line);background:rgba(251,146,60,.08)}
+
+/* 移动卡片式行 */
+@media(max-width:767px){
+  .thead{display:none}
+  .trow{grid-template-columns:1fr;gap:6px;padding:12px 14px}
+  .trow .st,.trow .num,.trow .date,.trow .op{display:none}
+  .m-meta{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;padding-left:22px}
+  .m-meta .num,.m-meta .date{display:inline}
+  .m-meta{font-size:10px;color:var(--fg-faint)}
+}
+.m-meta{display:none}
+
+/* ---------- S4 双表核对（两面板物理分离） ---------- */
+.twotab{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:900px){.twotab{grid-template-columns:1fr 1fr}}
+.panel{border:1px solid var(--line);background:var(--card);border-radius:var(--r-lg);padding:12px;display:flex;flex-direction:column;gap:8px}
+.panel h3{font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+.panel .row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border:1px solid rgba(255,255,255,.05);background:rgba(12,18,14,.6);border-radius:10px;padding:7px 10px;font-size:11px}
+.panel .sum{font-size:10px;color:var(--fg-sub)}
+
+/* ---------- S5 确认中心 / S6 审计 ---------- */
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;font-size:11px}
+.item .who{font-weight:700;color:#fff}
+.item .when{font-family:var(--mono);font-size:10px;color:var(--fg-mono)}
+.item .act{margin-left:auto;display:flex;gap:6px;flex:none}
+.tl{position:relative;padding-left:18px;display:flex;flex-direction:column;gap:10px}
+.tl:before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:1px;background:var(--line)}
+.tl .ev{position:relative;font-size:11px}
+.tl .ev:before{content:"";position:absolute;left:-17px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--fg-faint)}
+.tl .ev.g:before{background:#34d399}.tl .ev.a:before{background:var(--amber)}.tl .ev.o:before{background:#fb923c}
+.tl .ev .when{font-family:var(--mono);font-size:10px;color:var(--fg-mono);margin-right:8px}
+
+/* ---------- S3 抽屉（桌面右滑 / 移动底部） ---------- */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity var(--dur-drawer) var(--ease-out);z-index:40}
+.mask.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;z-index:50;background:var(--card-solid);border:1px solid var(--line);display:flex;flex-direction:column;
+  top:0;right:0;bottom:0;width:min(480px,100vw);transform:translateX(102%);transition:transform var(--dur-drawer) var(--ease-spring);
+  box-shadow:0 8px 32px rgba(0,0,0,.45)}
+.drawer.on{transform:translateX(0)}
+@media(max-width:767px){
+  .drawer{top:auto;left:0;right:0;bottom:0;width:auto;max-height:85vh;border-radius:16px 16px 0 0;transform:translateY(102%)}
+  .drawer.on{transform:translateY(0)}
+  .drawer .grip{display:block}
+}
+.grip{display:none;width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:8px auto 0}
+.d-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.d-head h2{font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.d-body{overflow-y:auto;padding:14px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.d-close{min-width:36px;min-height:36px}
+.xbtn{border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--fg-sub);border-radius:10px;font-size:14px;cursor:pointer;transition:color var(--dur-micro) linear,transform var(--dur-micro) var(--ease-out)}
+.xbtn:hover{color:#fff}.xbtn:active{transform:scale(.94)}
+
+/* 规则5：正式累计（仅已确认）汇总条 */
+.official{border:1px solid var(--green-line);background:rgba(52,211,153,.06);border-radius:var(--r-lg);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.official .t{font-size:10px;font-weight:700;color:var(--green-text);display:flex;align-items:center;gap:6px}
+.official .nums{display:flex;align-items:baseline;gap:14px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.official .nums b{font-size:22px;color:#a7f3d0}
+.official .nums .u{font-size:10px;color:var(--fg-faint);font-weight:500}
+.official .ex{font-size:10px;color:var(--amber-text)}
+.official .ex .cnt{font-family:var(--mono)}
+
+.info{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px}
+@media(min-width:640px){.info{grid-template-columns:repeat(4,1fr)}}
+.info .it{min-width:0}
+.info .k{color:var(--fg-faint)}
+.info .v{color:rgba(255,255,255,.85);font-family:var(--mono)}
+.info .v.txt{font-family:inherit}
+
+/* 来源披露（DB-4：默认折叠、标题自述） */
+.src-disc{border:1px solid var(--line);background:rgba(0,0,0,.2);border-radius:10px}
+.src-disc>button{display:flex;width:100%;align-items:center;gap:6px;padding:7px 10px;background:none;border:0;color:var(--fg-faint);font-size:10px;cursor:pointer;text-align:left}
+.src-disc>button:hover{color:var(--fg-sub)}
+.src-disc .bd{display:none;padding:2px 10px 8px}
+.src-disc.open .bd{display:grid}
+.src-disc .bd{grid-template-columns:1fr 1fr;gap:4px 12px;font-size:10px;color:var(--fg-sub)}
+.src-disc .bd .wide{grid-column:1/-1}
+
+.tk{display:flex;flex-direction:column}
+.tk-head{display:flex;align-items:center;gap:8px;padding:9px 12px;background:none;border:0;border-top:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.tk-head:hover{background:rgba(255,255,255,.03)}
+.tk .d{font-family:var(--mono);font-size:11px;color:var(--fg-mono);flex:none}
+.tk .pj{flex:1;min-width:0;font-size:11px;color:rgba(255,255,255,.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk .to{flex:none;font-size:10px;color:var(--fg-sub)}
+.tk-bd{display:none;padding:0 12px 12px;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:10px;margin:0 0}
+.tk.open .tk-bd{display:flex}
+.tk{border:1px solid var(--line);background:rgba(14,20,16,.65);border-radius:var(--r-lg)}
+.tk .srcrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+.review-note{border:1px solid var(--amber-line);background:rgba(251,191,36,.07);border-radius:10px;padding:8px 10px;font-size:11px;color:rgba(253,230,138,.9)}
+.empty{border:1px dashed var(--line-strong);border-radius:var(--r-lg);padding:24px;text-align:center;font-size:11px;color:var(--fg-faint)}
+
+/* ---------- 减动效（PF-1） ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*:before,*:after{transition-duration:.01ms!important;animation:none!important}
+  .expand{transition:none}
+  .drawer{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 原型声明（非产品 UI） -->
+  <div class="proto-note" role="note">
+    <b>设计原型 · 演示数据</b>
+    <span>本页为 Tier 工单中心 V3.0 设计规范配套原型，数据全部虚构，非真实台账。</span>
+    <span>规范：docs/tier-workspace-v3/DESIGN-SPEC-V3.md</span>
+  </div>
+
+  <section class="shell" aria-label="Tier 工单中心 V3 原型">
+    <!-- 标题行 -->
+    <div class="head">
+      <div>
+        <h1>Tier 工单中心 <span class="vbadge">V3.0 · 原型</span></h1>
+        <p class="sub">按玩家聚合的工单工作台 —— 名称与 Tier 分离 · K/D 归属测试者 · 双表分别核对 · 未确认不计数</p>
+      </div>
+      <button class="btn" id="refreshBtn" type="button">↻ 刷新台账</button>
+    </div>
+
+    <!-- 名称识别保护：黄色常驻（任何状态不消失） -->
+    <div class="banner" role="alert" data-testid="name-guard-banner">
+      <span class="ic">⚠</span>
+      <div>
+        <p class="t1">名称识别保护：MT4、LT5、HT5 等 Tier 标识必须与玩家名称分离，禁止并入玩家身份。</p>
+        <p class="t2">有效等级词表：HT1–HT5 · LT1–LT5 · LZ1–LZ5 · LL1–LL5（现行 Tier 体系）；MT1–MT5 等词表外形态只提示人工核对，不创建等级、不自动拆分；原始名称全文保留可追溯；无法确定的记录不自动归档。</p>
+        <p class="t3">⚠ 名称与 Tier 疑似混淆，已暂停自动处理，请管理员核对。（3 条工单待核对）</p>
+      </div>
+    </div>
+
+    <!-- DB-1 常驻待办条：需要动作的统计置顶 -->
+    <div class="todo" aria-label="常驻待办（点击直达筛选）">
+      <button class="td" data-filter="PENDING_REVIEW"><span class="n tone-amber" id="td-review">6</span><span class="l">待核对</span><span class="dot dot-amber"></span></button>
+      <button class="td" data-filter="READY"><span class="n tone-purple" id="td-ready">9</span><span class="l">待归档</span><span class="dot dot-purple"></span></button>
+      <button class="td" data-filter="PLAYER_PENDING"><span class="n tone-sky" id="td-confirm">12</span><span class="l">待玩家确认</span><span class="dot dot-sky"></span></button>
+      <button class="td" data-filter="DISPUTED"><span class="n tone-orange" id="td-disputed">2</span><span class="l">异议</span><span class="dot dot-orange"></span></button>
+    </div>
+
+    <!-- 页签 -->
+    <div class="tabs" role="tablist" aria-label="工单中心区域">
+      <span class="pill" id="pill"></span>
+      <button role="tab" aria-selected="true" data-tab="overview">▦ 工单总览</button>
+      <button role="tab" aria-selected="false" data-tab="players">👥 玩家工单</button>
+      <button role="tab" aria-selected="false" data-tab="twotab">▤ 双表核对</button>
+      <button role="tab" aria-selected="false" data-tab="confirm">☑ 确认中心</button>
+      <button role="tab" aria-selected="false" data-tab="audit">🕐 审计历史</button>
+      <button role="tab" aria-selected="false" data-tab="legacy">↻ 整理表通道</button>
+    </div>
+
+    <!-- S1 总览 -->
+    <div class="sec on" id="sec-overview" role="tabpanel">
+      <div class="stat-main" id="statMain"></div>
+      <div class="stat-sub" id="statSub"></div>
+      <p class="footnote">统计口径：全部有效工单 = 台账去重保留行（完全重复来源已合并，不重复计数）；待处理记录与存在异议记录不计入正式累计战绩；已确认且未重复的记录才计入累计 K/D。所有数字来自台账实时数据，无任何写死。</p>
+    </div>
+
+    <!-- S2 玩家工单 -->
+    <div class="sec" id="sec-players" role="tabpanel">
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="搜索玩家名称 / 游戏 ID / 考核员" aria-label="搜索玩家">
+        <select id="fStatus" aria-label="按工单状态筛选">
+          <option value="ALL">全部状态</option>
+          <option value="PENDING_REVIEW">待核对</option>
+          <option value="READY">待归档</option>
+          <option value="PLAYER_PENDING">待玩家确认</option>
+          <option value="CONFIRMED">已确认</option>
+          <option value="ARCHIVED">已归档</option>
+          <option value="NEEDS_IDENTITY">身份需要核对</option>
+          <option value="DISPUTED">存在异议</option>
+        </select>
+        <select id="fSort" aria-label="排序方式">
+          <option value="recent">按测试日期排序</option>
+          <option value="count">按工单数量排序</option>
+        </select>
+        <span class="count" id="pcount"></span>
+      </div>
+      <div class="tbl">
+        <div class="thead">
+          <span>玩家名称</span><span>Tier</span><span style="text-align:right">工单数</span><span style="text-align:right">待处理</span><span>状态</span><span>最近测试</span><span style="text-align:right">操作</span>
+        </div>
+        <div class="scroll" id="plist"></div>
+      </div>
+      <p class="footnote">聚合规则：玩家身份优先（游戏 ID / 唯一名称匹配）；同名但不同 ID 不合并；同 ID 不同名称进入改名核对线索；名称尾缀（如 bad小杨HT5）只有在「去除后唯一命中榜单条目」时才作为标注分离展示，否则保留原名并标记人工核对。</p>
+    </div>
+
+    <!-- S4 双表核对 -->
+    <div class="sec" id="sec-twotab" role="tabpanel">
+      <div class="twotab">
+        <div class="panel">
+          <h3>收集表 <span class="b gray">d5roro</span></h3>
+          <p class="sum">独立读取 · 独立核对 · 本批 42 有效行 · 6 待核对</p>
+          <div class="row"><span class="d mono">2026-11-08</span><span>SHIELD · bad小杨 → HT5?</span><span class="b amber">待核对</span></div>
+          <div class="row"><span class="d mono">2026-11-07</span><span>CRYSTAL · Mace_Rui → LT4</span><span class="b purple">待归档</span></div>
+          <div class="row"><span class="d mono">2026-11-06</span><span>SHIELD · 小车爱拉稀 → HT2</span><span class="b sky">待玩家确认</span></div>
+        </div>
+        <div class="panel">
+          <h3>整理表 <span class="b gray">y344e4</span></h3>
+          <p class="sum">独立读取 · 独立核对 · 本批 11 有效行 · 1 待核对 · 两表数字互不合并</p>
+          <div class="row"><span class="d mono">2026-11-05</span><span>SMP · 夜风 → LT2</span><span class="b amber">同名歧义 · 待核对</span></div>
+          <div class="row"><span class="d mono">2026-11-03</span><span>DSMP · 山药丶 → LT1</span><span class="b green">校验通过</span></div>
+        </div>
+      </div>
+      <p class="footnote">双表核对规则：收集表与整理表各自独立读取、独立统计、独立审批；禁止跨表合并计数；同一条数据只会来自其中一张表（行指纹唯一）。</p>
+    </div>
+
+    <!-- S5 确认中心 -->
+    <div class="sec" id="sec-confirm" role="tabpanel">
+      <div class="list" id="confirmList"></div>
+      <p class="footnote">确认规则：未确认记录不得进入正式成长记录；玩家确认后才计入正式累计 K/D；玩家提出异议后记录冻结并等待管理员处理。</p>
+    </div>
+
+    <!-- S6 审计 -->
+    <div class="sec" id="sec-audit" role="tabpanel">
+      <div class="tl" id="auditList"></div>
+      <p class="footnote">审计原则：每一次写入 / 拒绝 / 回档 / 确认豁免都留痕（操作者 · 时刻 · 对象 · 结果），只增不删。</p>
+    </div>
+
+    <!-- 整理表通道 -->
+    <div class="sec" id="sec-legacy" role="tabpanel">
+      <p class="footnote">整理表 y344e4 同步审核通道（既有能力原样保留）：手动同步 → 分组审核 → 逐条勾选写入 / 拒绝 → 回档。每行必须手动勾选，无全选；AI 建议仅供参考，绝不代操作。</p>
+      <div class="empty">通道示意 —— 实施时复用现有 LegacySyncSection 组件，本原型不展开</div>
+    </div>
+  </section>
+
+  <p class="footnote">© GOATB CLUB · Tier Workspace V3.0 设计原型 — 规范见 docs/tier-workspace-v3/DESIGN-SPEC-V3.md · 实施待管理员授权</p>
+</div>
+
+<!-- S3 抽屉 -->
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="玩家详情">
+  <div class="grip"></div>
+  <div class="d-head">
+    <h2 id="dTitle"></h2>
+    <button class="xbtn d-close" id="dClose" aria-label="关闭详情">✕</button>
+  </div>
+  <div class="d-body" id="dBody"></div>
+</aside>
+
+<script>
+/* ============================================================
+   演示数据（虚构；结构与 V2.0 use-workspace-data.ts 契约一致）
+   ============================================================ */
+const STATS = {recognized:47, merged:5, pendingReview:6, ready:9, playerPending:12, confirmed:18, archived:24, disputed:2, identityReviewCount:3};
+
+const PLAYERS = [
+  {
+    aggKey:'p1', displayName:'bad小杨', variants:['bad小杨HT5','bad小杨'], tierCandidates:['HT5'],
+    currentTiers:[], needsReview:false, latest:'2026-11-08',
+    counts:{pendingReview:1, ready:1, playerPending:0, confirmed:1, disputed:0, archived:1},
+    official:{kills:12, deaths:4, excluded:2},
+    records:[
+      {date:'2026-11-08', project:'SHIELD', to:'HT5?', examiner:'未提供', k:null, d:null,
+       src:'收集表 d5roro', proc:['待核对','amber'], conf:[], match:['身份待核对','amber'],
+       note:'名称尾缀「HT5」已分离为候选词（未核实），需人工核对；原文 bad小杨HT5 全文保留。',
+       raw:{sub:'山河', row:'第 41 行', fp:'a3f19c77e2b04d18', testee:'bad小杨HT5'}},
+      {date:'2026-11-06', project:'CRYSTAL', to:'HT4', examiner:'山河HT2', k:9, d:5,
+       src:'收集表 d5roro', proc:['待归档','purple'], conf:[], match:[],
+       note:null, raw:{sub:'山河', row:'第 38 行', fp:'7b02e5a1c9d34418', testee:'bad小杨'}},
+      {date:'2026-11-02', project:'SHIELD', to:'HT3', examiner:'山河HT2', k:12, d:4,
+       src:'收集表 d5roro', proc:['已归档','green'], conf:['已确认','green'], match:[],
+       note:null, raw:{sub:'山河', row:'第 29 行', fp:'c81a44f0b2e7d693', testee:'bad小杨'},
+       approve:'管理员 · 2026-11-03 09:12 · SHIELD → HT3'},
+    ]
+  },
+  {
+    aggKey:'p2', displayName:'Mace_Rui', variants:['Mace_RuiLT4','Mace_Rui'], tierCandidates:['LT4'],
+    currentTiers:[{mode:'CRYSTAL',tier:'LT5'}], needsReview:false, latest:'2026-11-07',
+    counts:{pendingReview:0, ready:1, playerPending:1, confirmed:1, disputed:0, archived:2},
+    official:{kills:8, deaths:3, excluded:2},
+    records:[
+      {date:'2026-11-07', project:'CRYSTAL', to:'LT4', examiner:'Meko', k:null, d:6,
+       src:'收集表 d5roro', proc:['待归档','purple'], conf:[], match:[],
+       note:'D 已提供、K 缺失：按规则显示「未提供」，绝不补 0。', raw:{sub:'Meko', row:'第 12 行', fp:'19d3c8a0f4e2b765', testee:'Mace_RuiLT4'}},
+      {date:'2026-11-04', project:'CRYSTAL', to:'LT5', examiner:'Meko', k:7, d:2,
+       src:'整理表 y344e4', proc:['已归档','green'], conf:['待玩家确认','sky'], match:[],
+       note:null, raw:{sub:'Meko', row:'第 3 行', fp:'e57b1d90c3a64882', testee:'Mace_Rui'}},
+      {date:'2026-10-30', project:'SHIELD', to:'LT5', examiner:'Meko', k:8, d:3,
+       src:'收集表 d5roro', proc:['已归档','green'], conf:['已确认','green'], match:[],
+       note:null, raw:{sub:'Meko', row:'第 44 行', fp:'b40f72e8a1d95c36', testee:'Mace_Rui'},
+       approve:'管理员 · 2026-10-31 20:45 · SHIELD → LT5'},
+    ]
+  },
+  {
+    aggKey:'p3', displayName:'小车爱拉稀', variants:['小车爱拉稀'], tierCandidates:[],
+    currentTiers:[{mode:'SHIELD',tier:'HT2'}], needsReview:false, latest:'2026-11-01',
+    counts:{pendingReview:0, ready:0, playerPending:1, confirmed:3, disputed:0, archived:4},
+    official:{kills:27, deaths:9, excluded:1},
+    records:[
+      {date:'2026-11-01', project:'SHIELD', to:'HT2', examiner:'Q哥', k:null, d:null,
+       src:'收集表 d5roro', proc:['已归档','green'], conf:['待玩家确认','sky'], match:[],
+       note:'胜负未填：K/D 显示「未提供」，不推算。', raw:{sub:'Q哥', row:'第 51 行', fp:'62a8d1c4e9f0b537', testee:'小车爱拉稀'}},
+      {date:'2026-10-26', project:'CRYSTAL', to:'HT3', examiner:'Q哥', k:11, d:4,
+       src:'收集表 d5roro', proc:['已归档','green'], conf:['已确认','green'], match:[],
+       note:null, raw:{sub:'Q哥', row:'第 47 行', fp:'8d43b6e2a0c19f75', testee:'小车爱拉稀'},
+       approve:'管理员 · 2026-10-27 14:03 · CRYSTAL → HT3'},
+      {date:'2026-10-19', project:'SHIELD', to:'HT3', examiner:'Q哥', k:9, d:3,
+       src:'整理表 y344e4', proc:['已归档','green'], conf:['已确认','green'], match:[],
+       note:null, raw:{sub:'Q哥', row:'第 9 行', fp:'3c9e01a7b8d246f5', testee:'小车爱拉稀'},
+       approve:'管理员 · 2026-10-20 11:37 · SHIELD → HT3'},
+    ]
+  },
+  {
+    aggKey:'p4', displayName:'夜风', variants:['夜风','夜风丶'], tierCandidates:['LT2'],
+    currentTiers:[], needsReview:true, latest:'2026-11-05',
+    counts:{pendingReview:2, ready:0, playerPending:0, confirmed:0, disputed:0, archived:0},
+    official:{kills:null, deaths:null, excluded:2},
+    records:[
+      {date:'2026-11-05', project:'SMP', to:'LT2', examiner:'DD', k:null, d:null,
+       src:'整理表 y344e4', proc:['待核对','amber'], conf:[], match:['同名歧义','amber'],
+       note:'榜单存在同名玩家 2 名（夜风 / 夜风丶）：禁止自动合并、禁止自动归档，等待管理员判定。',
+       raw:{sub:'DD', row:'第 5 行', fp:'f1b8c3d7a2e40596', testee:'夜风'}},
+      {date:'2026-11-02', project:'DSMP', to:'LT2', examiner:'DD', k:null, d:null,
+       src:'收集表 d5roro', proc:['待核对','amber'], conf:[], match:['身份待核对','amber'],
+       note:'同上：同名歧义，暂停自动处理。', raw:{sub:'DD', row:'第 33 行', fp:'95e2a7c0b4d8136f', testee:'夜风丶'}},
+    ]
+  },
+  {
+    aggKey:'p5', displayName:'山药丶', variants:['山药丶'], tierCandidates:['LT1'],
+    currentTiers:[{mode:'DSMP',tier:'LT2'}], needsReview:false, latest:'2026-11-03',
+    counts:{pendingReview:0, ready:0, playerPending:0, confirmed:1, disputed:1, archived:2},
+    official:{kills:5, deaths:6, excluded:1},
+    records:[
+      {date:'2026-11-03', project:'DSMP', to:'LT1', examiner:'老白', k:5, d:6,
+       src:'收集表 d5roro', proc:['已归档','green'], conf:['有异议','orange'], match:[],
+       note:'玩家异议：称测试日期有误（差一天）。记录冻结，等待管理员处理；异议期间不计入正式累计。',
+       raw:{sub:'老白', row:'第 18 行', fp:'27f0d3b8a5e6c914', testee:'山药丶'}},
+      {date:'2026-10-15', project:'DSMP', to:'LT2', examiner:'老白', k:5, d:6,
+       src:'整理表 y344e4', proc:['已归档','green'], conf:['已确认','green'], match:[],
+       note:null, raw:{sub:'老白', row:'第 2 行', fp:'0a6c93e5f1b8d427', testee:'山药丶'},
+       approve:'管理员 · 2026-10-16 08:20 · DSMP → LT2'},
+    ]
+  },
+];
+
+const CONFIRMS = [
+  {who:'小车爱拉稀', what:'SHIELD → HT2 · 2026-11-01', when:'2026-11-01 18:22', status:['待玩家确认','sky']},
+  {who:'Mace_Rui', what:'CRYSTAL → LT5 · 2026-11-04', when:'2026-11-04 21:05', status:['待玩家确认','sky']},
+];
+const AUDITS = [
+  {when:'11-08 22:14', kind:'', text:'管理员 审批写入：小车爱拉稀 · SHIELD → HT2（台账 #51 行）', cls:'g'},
+  {when:'11-07 19:40', kind:'', text:'玩家 山药丶 对 DSMP → LT1（11-03）提出异议：测试日期有误 —— 记录已冻结', cls:'o'},
+  {when:'11-06 10:02', kind:'', text:'管理员 回档：夜风 · SMP → LT2 同名歧义误归档，回退并转入待核对', cls:'a'},
+  {when:'11-05 16:31', kind:'', text:'同步批次 #87：收集表 42 有效 / 6 待核对 / 3 幂等命中', cls:''},
+];
+
+/* ---------- 工具 ---------- */
+const $ = s => document.querySelector(s);
+const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+const kdChip = (v, cls, label) => `<span class="kd ${cls}">${label} ${v === null ? '<span title="缺失显示「未提供」，绝不补 0">未提供</span>' : v}</span>`;
+const kdChips = r => `<span class="kds" title="K·击杀 / D·死亡，均归属测试者；缺失显示「未提供」，绝不补 0">${kdChip(r.k,'k','K')}${kdChip(r.d,'d','D')}</span>`;
+const badge = (pair) => pair && pair[0] ? `<span class="b ${pair[1]}">${pair[0]}</span>` : '';
+
+/* ---------- S1 总览渲染（DB-2 主/次两层） ---------- */
+function renderStats(){
+  const main = [
+    {k:'PENDING_REVIEW', l:'待核对', v:STATS.pendingReview, tone:'tone-amber', hint:'解析失败/身份歧义/疑似垃圾'},
+    {k:'READY', l:'待归档', v:STATS.ready, tone:'tone-purple', hint:'等待管理员审批写入'},
+    {k:'PLAYER_PENDING', l:'待玩家确认', v:STATS.playerPending, tone:'tone-sky', hint:'已归档，等玩家本人确认'},
+    {k:'DISPUTED', l:'存在异议', v:STATS.disputed, tone:'tone-orange', hint:'玩家异议，待管理员处理'},
+  ];
+  const sub = [
+    {k:'ALL', l:'全部有效工单', v:STATS.recognized - STATS.merged, tone:'tone-plain', hint:'去重后总数'},
+    {k:'ARCHIVED', l:'已归档', v:STATS.archived, tone:'tone-green', hint:'已写入玩家档案'},
+    {k:'CONFIRMED', l:'已确认', v:STATS.confirmed, tone:'tone-green', hint:'计入正式成长记录'},
+    {k:'NEEDS_IDENTITY', l:'身份待核对', v:STATS.identityReviewCount, tone:'tone-amber', hint:'名称与 Tier 疑似混淆'},
+  ];
+  $('#statMain').innerHTML = main.map(c=>statCard(c,'')).join('');
+  $('#statSub').innerHTML = sub.map(c=>statCard(c,' sub')).join('');
+}
+function statCard(c, extra){
+  return `<button class="stat${extra}" data-filter="${c.k}">
+    <span class="lb"><span class="${c.tone}">●</span>${c.l}</span>
+    <span class="v ${c.tone}">${c.v}</span>
+    <span class="hint">${c.hint}（点击筛选）</span></button>`;
+}
+
+/* ---------- S2 玩家列表渲染 ---------- */
+let state = {q:'', filter:'ALL', sort:'recent', expanded:null};
+
+function playerVisible(p){
+  const f = state.filter;
+  if (f === 'PENDING_REVIEW' && !p.counts.pendingReview) return false;
+  if (f === 'READY' && !p.counts.ready) return false;
+  if (f === 'PLAYER_PENDING' && !p.counts.playerPending) return false;
+  if (f === 'CONFIRMED' && !p.counts.confirmed) return false;
+  if (f === 'ARCHIVED' && !p.counts.archived) return false;
+  if (f === 'DISPUTED' && !p.counts.disputed) return false;
+  if (f === 'NEEDS_IDENTITY' && !p.needsReview) return false;
+  if (state.q){
+    const hay = [p.displayName, ...p.variants, ...p.records.map(r=>r.examiner)].join('\u0001').toLowerCase();
+    if (!hay.includes(state.q.toLowerCase())) return false;
+  }
+  return true;
+}
+function playerSorted(list){
+  return [...list].sort((a,b)=>{
+    if (a.needsReview !== b.needsReview) return a.needsReview ? -1 : 1;
+    if (state.sort === 'count' && (b.records.length - a.records.length)) return b.records.length - a.records.length;
+    return (b.latest||'').localeCompare(a.latest||'') || a.displayName.localeCompare(b.displayName,'zh-Hans-CN');
+  });
+}
+function playerBadges(p){
+  const h = [];
+  if (p.needsReview) h.push(['身份待核对','amber']);
+  if (p.counts.pendingReview) h.push([`待核对 ${p.counts.pendingReview}`,'amber']);
+  if (p.counts.ready) h.push([`待归档 ${p.counts.ready}`,'purple']);
+  if (p.counts.playerPending) h.push([`待确认 ${p.counts.playerPending}`,'sky']);
+  if (p.counts.disputed) h.push([`异议 ${p.counts.disputed}`,'orange']);
+  if (p.counts.confirmed) h.push([`已确认 ${p.counts.confirmed}`,'green']);
+  return h.map(badge).join('');
+}
+function renderPlayers(){
+  const list = playerSorted(PLAYERS.filter(playerVisible));
+  $('#pcount').textContent = `${list.length} 位玩家`;
+  const box = $('#plist'); box.innerHTML = '';
+  if (!list.length){
+    box.appendChild(el('div','empty','没有匹配的玩家工单 —— 调整搜索/筛选条件，或先「拉取收集表归档」建立台账'));
+    return;
+  }
+  for (const p of list){
+    const row = el('div','prow');
+    const pending = p.counts.pendingReview + p.counts.ready;
+    const open = state.expanded === p.aggKey;
+    row.innerHTML = `
+      <button class="trow" aria-expanded="${open}">
+        <span class="name"><span class="chev">▸</span>
+          <span class="nm" title="原始名称变体：${p.variants.join(' / ')}（原文全部保留可追溯）">${p.displayName}</span>
+          ${p.variants.length>1?`<span class="b gray" title="原始名称变体：${p.variants.join(' / ')}（已按身份归并；原名可追溯）">×${p.variants.length}形态</span>`:''}
+        </span>
+        <span class="st">${p.currentTiers.map(t=>`<span class="b tier" title="当前段位 · ${t.mode}">${t.tier}</span>`).join('')}
+          ${p.tierCandidates.filter(c=>!p.currentTiers.some(t=>t.tier===c)).map(c=>`<span class="b amber" title="识别候选（未核实）——不能仅凭字符串认定一定是等级">${c}?</span>`).join('')}
+          ${(!p.currentTiers.length && !p.tierCandidates.length)?'<span class="footnote">无可靠数据</span>':''}</span>
+        <span class="num">${p.records.length}</span>
+        <span class="num ${pending?'warn':''}">${pending}</span>
+        <span class="st">${playerBadges(p)}</span>
+        <span class="date">${p.latest ?? '未提供'}</span>
+        <span class="op"><span class="chip" data-open-detail="${p.aggKey}" role="button" tabindex="0">◎ 详情</span></span>
+      </button>
+      <div class="m-meta">
+        <span class="num">${p.records.length} 单</span>
+        <span class="date">最近 ${p.latest ?? '未提供'}</span>
+        ${playerBadges(p)}
+      </div>
+      <div class="expand ${open?'open':''}"><div>
+        <div class="recs">
+          <div class="cap"><span>共 ${p.records.length} 条独立测试记录（原始名称：${p.variants.join(' / ')}）</span>
+            <span class="lk" data-open-detail="${p.aggKey}" role="button" tabindex="0">打开完整详情 →</span></div>
+          ${p.records.map(r=>`
+            <div class="rec">
+              <span class="d">${r.date}</span>
+              <span class="pj">${r.project} · 考核员 ${r.examiner} · → ${r.to}</span>
+              <span class="src" title="来源表独立读取">${r.src}</span>
+              ${kdChips(r)}
+              ${badge(r.proc)}${badge(r.conf)}${badge(r.match)}
+            </div>`).join('')}
+        </div>
+      </div></div>`;
+    row.querySelector('.trow').addEventListener('click', e => {
+      if (e.target.closest('[data-open-detail]')) return;
+      state.expanded = open ? null : p.aggKey; renderPlayers();
+    });
+    row.querySelectorAll('[data-open-detail]').forEach(n => n.addEventListener('click', e => { e.stopPropagation(); openDrawer(p.aggKey); }));
+    box.appendChild(row);
+  }
+}
+
+/* ---------- S3 抽屉 ---------- */
+let lastFocus = null;
+function openDrawer(aggKey){
+  const p = PLAYERS.find(x=>x.aggKey===aggKey); if (!p) return;
+  lastFocus = document.activeElement;
+  $('#dTitle').innerHTML = `${p.displayName} ${p.tierCandidates.map(c=>`<span class="b amber">${c}?</span>`).join('')}${p.currentTiers.map(t=>`<span class="b tier">${t.tier}</span>`).join('')}
+    ${p.variants.length>1?`<span class="b gray" title="原始名称变体：${p.variants.join(' / ')}">×${p.variants.length}形态</span>`:''}`;
+  const pendingCount = p.records.filter(r=>r.proc[0]!=='已归档'||(r.conf[0]&&r.conf[0]!=='已确认')).length;
+  $('#dBody').innerHTML = `
+    <div class="official" title="业务规则：未确认记录不得进入正式成长记录">
+      <span class="t">✓ 正式累计 K/D（仅已确认记录）</span>
+      <span class="nums">
+        <span><b>${p.official.kills ?? '—'}</b> <span class="u">K·击杀</span></span>
+        <span><b>${p.official.deaths ?? '—'}</b> <span class="u">D·死亡</span></span>
+        <span class="u">归属测试者 · 缺失不补 0</span>
+      </span>
+      <span class="ex">另有 <span class="cnt">${pendingCount}</span> 条未确认/待处理记录 <b>不计入</b>正式累计（待核对 / 待归档 / 待玩家确认 / 异议）。</span>
+    </div>
+    ${p.records.map((r,i)=>`
+      <div class="tk" id="tk-${i}">
+        <button class="tk-head" aria-expanded="false" data-tk="${i}">
+          <span class="chev">▸</span>
+          <span class="d">${r.date}</span>
+          <span class="pj">${r.project}</span>
+          <span class="to">→ ${r.to}</span>
+          ${kdChips(r)}
+        </button>
+        <div class="tk-bd">
+          <div class="srcrow">
+            <span class="src" title="来源表独立读取">${r.src}</span>
+            ${badge(r.proc)}${badge(r.conf)}${badge(r.match)}
+          </div>
+          <div class="info">
+            <span class="it"><span class="k">玩家（纯名称）</span><span class="v txt">${p.displayName}</span></span>
+            <span class="it"><span class="k">原始记录名称</span><span class="v txt" title="原文保留，可追溯">${r.raw.testee}</span></span>
+            <span class="it"><span class="k">考核员</span><span class="v">${r.examiner}</span></span>
+            <span class="it"><span class="k">测试日期</span><span class="v">${r.date}</span></span>
+            <span class="it"><span class="k">原 Tier（候选）</span><span class="v">${p.tierCandidates[0] ?? '未提供'}</span></span>
+            <span class="it"><span class="k">测试后 Tier</span><span class="v">${r.to}</span></span>
+            <span class="it"><span class="k">测试者 K/D</span><span class="v">K ${r.k ?? '未提供'} · D ${r.d ?? '未提供'}</span></span>
+            <span class="it"><span class="k">提交者</span><span class="v txt">${r.raw.sub}</span></span>
+          </div>
+          <div class="kds">${kdChips(r)}<span style="font-size:10px;color:var(--fg-sub)">K·击杀与 D·死亡均归属被测玩家（测试者）；缺失显示「未提供」，不补 0、不推算。</span></div>
+          ${r.note?`<div class="review-note">⚠ ${r.note}</div>`:''}
+          <div class="src-disc">
+            <button data-src="${i}" aria-expanded="false"><span class="chev">▸</span> 来源与技术详情（原始提交者 · 工作表 · 记录编号 · 内容指纹）</button>
+            <div class="bd">
+              <span class="it"><span class="k">原始提交者</span><span class="v txt">${r.raw.sub}</span></span>
+              <span class="it"><span class="k">来源工作表</span><span class="v txt">${r.src}</span></span>
+              <span class="it"><span class="k">原始记录编号</span><span class="v txt">sheet ${r.raw.row}</span></span>
+              <span class="it wide"><span class="k">内容指纹</span><span class="v">${r.raw.fp}…</span></span>
+              ${r.approve?`<span class="it wide" style="color:var(--green-text)">归档写入：${r.approve}</span>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn primary" disabled title="原型演示：实施时接既有审批门禁">审批写入</button>
+            <button class="btn" disabled>标记待核对</button>
+            <button class="btn" style="color:var(--orange-text);border-color:var(--orange-line)" disabled>拒绝</button>
+          </div>
+        </div>
+      </div>`).join('')}
+    <p class="footnote">操作说明：审批/拒绝/回档复用既有后端门禁，本原型按钮仅示意位置与层级（主操作紫 · 中性灰 · 危险红橙，危险远离主操作）。</p>`;
+  $('#dBody').querySelectorAll('[data-tk]').forEach(b => b.addEventListener('click', () => {
+    const tk = b.closest('.tk'); const open = tk.classList.toggle('open');
+    b.setAttribute('aria-expanded', open);
+  }));
+  $('#dBody').querySelectorAll('[data-src]').forEach(b => b.addEventListener('click', () => {
+    const d = b.closest('.src-disc'); const open = d.classList.toggle('open');
+    b.setAttribute('aria-expanded', open);
+  }));
+  $('#mask').classList.add('on');
+  $('#drawer').classList.add('on');
+  $('#dClose').focus();
+}
+function closeDrawer(){
+  $('#mask').classList.remove('on');
+  $('#drawer').classList.remove('on');
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+
+/* ---------- S5 / S6 渲染 ---------- */
+function renderConfirm(){
+  $('#confirmList').innerHTML = CONFIRMS.map(c=>`
+    <div class="item"><div><span class="who">${c.who}</span> · ${c.what}
+      <div class="when">${c.when}</div></div>
+      <span class="b ${c.status[1]}">${c.status[0]}</span>
+      <div class="act"><button class="btn" disabled>发送提醒</button></div>
+    </div>`).join('') || '<div class="empty">暂无待确认记录</div>';
+}
+function renderAudit(){
+  $('#auditList').innerHTML = AUDITS.map(a=>`
+    <div class="ev ${a.cls}"><span class="when">${a.when}</span>${a.text}</div>`).join('');
+}
+
+/* ---------- 页签（spring pill 滑动，可打断） ---------- */
+const tabsEl = $('.tabs');
+function movePill(btn){
+  const pill = $('#pill');
+  pill.style.width = btn.offsetWidth + 'px';
+  pill.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+}
+function setTab(key){
+  document.querySelectorAll('.tabs [data-tab]').forEach(b=>{
+    const on = b.dataset.tab === key;
+    b.setAttribute('aria-selected', on);
+    if (on) movePill(b);
+  });
+  document.querySelectorAll('.sec').forEach(s=>s.classList.toggle('on', s.id === 'sec-'+key));
+}
+document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+
+/* ---------- 筛选联动（待办条 / 统计卡 → 玩家工单） ---------- */
+function applyFilter(f){
+  state.filter = f; state.expanded = null;
+  $('#fStatus').value = f;
+  setTab('players'); renderPlayers();
+}
+document.querySelectorAll('[data-filter]').forEach(n=>n.addEventListener('click',()=>applyFilter(n.dataset.filter)));
+
+/* ---------- 工具栏 ---------- */
+$('#q').addEventListener('input', e=>{ state.q = e.target.value.trim(); renderPlayers(); });
+$('#fStatus').addEventListener('change', e=>{ state.filter = e.target.value; renderPlayers(); });
+$('#fSort').addEventListener('change', e=>{ state.sort = e.target.value; renderPlayers(); });
+$('#refreshBtn').addEventListener('click', e=>{ const b=e.currentTarget; b.disabled=true; b.textContent='↻ 刷新中…'; setTimeout(()=>{b.disabled=false;b.textContent='↻ 刷新台账';},700); });
+
+/* ---------- 抽屉关闭（Escape / 遮罩 / 按钮：RS-4） ---------- */
+$('#dClose').addEventListener('click', closeDrawer);
+$('#mask').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e=>{ if (e.key === 'Escape' && $('#drawer').classList.contains('on')) closeDrawer(); });
+
+/* ---------- 初始化 ---------- */
+renderStats(); renderPlayers(); renderConfirm(); renderAudit();
+window.addEventListener('resize', ()=>{ const a = document.querySelector('.tabs [aria-selected="true"]'); if (a) movePill(a); });
+setTab('overview');
+</script>
+</body>
+</html>

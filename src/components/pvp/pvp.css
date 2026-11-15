@@ -1,0 +1,402 @@
+/* ============================================================
+   约 PVP · Premium Glass UI（工单 2026-11-10 V1.0）
+   ------------------------------------------------------------
+   - 命名空间 pvp-*，不触碰 globals.css（冻结）与其他模块样式
+   - 品牌：沿用 GOATB 紫强调 #BF5AF2；面板深石墨玻璃（任务书 §3.2 参考值，
+     与 XT 榜现有深色玻璃观感同族）；语义色仅 紫/绿/琥珀/红橙/灰
+   - backdrop-filter 渐进增强：不支持时回退高不透明度纯色底
+   - 只动 transform/opacity；prefers-reduced-motion 全退化
+   - Android/弱性能：≤768px 降低模糊强度（媒体查询）
+   ============================================================ */
+
+:root {
+  --pvp-glass-bg: rgba(18, 20, 29, 0.78);
+  --pvp-glass-line: rgba(255, 255, 255, 0.10);
+  --pvp-glass-blur: 18px;
+  --pvp-accent: #bf5af2;
+  --pvp-accent-soft: rgba(191, 90, 242, 0.14);
+  --pvp-accent-line: rgba(191, 90, 242, 0.38);
+  --pvp-accent-text: #d0a6f7;
+}
+
+/* ---------- 入口胶囊（置于 xtlb-search-row 最前；独立按钮，不参与筛选值） ---------- */
+.pvp-entry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--pvp-accent-line);
+  background: var(--pvp-accent-soft);
+  color: var(--pvp-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms linear, border-color 120ms linear, transform 120ms cubic-bezier(.22, 1.2, .36, 1);
+}
+.pvp-entry-chip:hover { background: rgba(191, 90, 242, 0.22); border-color: rgba(191, 90, 242, 0.5); }
+.pvp-entry-chip:active { transform: scale(0.96); }
+.pvp-entry-chip:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 2px; }
+.pvp-entry-chip .pvp-entry-dot { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #34d399; flex: none; }
+
+/* ---------- 遮罩与玻璃灯箱 ---------- */
+.pvp-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(5, 7, 10, 0.6);
+  opacity: 0;
+}
+.pvp-mask.open { opacity: 1; }
+
+.pvp-glass-panel {
+  position: fixed;
+  z-index: 91;
+  top: 50%;
+  left: 50%;
+  /* 自居中位移用独立 translate 属性（2026-11-10 入口验收修正）：
+     framer-motion 的 y/scale 动画走内联 transform，会整体覆盖 CSS transform，
+     故不能把 translate(-50%,-50%) 写进 transform；独立 translate 属性与
+     transform 叠加合成（先 translate 后 transform），居中 + 动效两不误。
+     不支持该属性的旧内核回退为现在的偏移态（无新增回归）。 */
+  translate: -50% -50%;
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(86dvh, 780px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--pvp-glass-line);
+  color: #e8eef2;
+  background: rgba(20, 22, 31, 0.96);            /* 回退底（无 backdrop-filter 时的高不透明度） */
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .pvp-glass-panel {
+    background: var(--pvp-glass-bg);
+    backdrop-filter: blur(var(--pvp-glass-blur)) saturate(135%);
+    -webkit-backdrop-filter: blur(var(--pvp-glass-blur)) saturate(135%);
+  }
+}
+@media (max-width: 767px) {
+  .pvp-glass-panel {
+    width: calc(100vw - 16px);
+    max-height: 88dvh;
+  }
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .pvp-glass-panel { --pvp-glass-blur: 10px; }  /* 移动端降低模糊强度（工单 §13） */
+  }
+}
+
+/* 顶部柔和反射高光（环境光，非 RGB 灯条） */
+.pvp-glass-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  pointer-events: none;
+}
+
+.pvp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.pvp-head .t { font-size: 15px; font-weight: 800; letter-spacing: 0.02em; }
+.pvp-head .s { font-size: 11px; color: rgba(232, 238, 242, 0.55); margin-top: 1px; }
+.pvp-x {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(232, 238, 242, 0.6);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 120ms linear, transform 120ms cubic-bezier(.22, 1.2, .36, 1);
+}
+.pvp-x:hover { color: #fff; }
+.pvp-x:active { transform: scale(0.94); }
+.pvp-x:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 2px; }
+
+.pvp-body { overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px 18px; -webkit-overflow-scrolling: touch; }
+
+/* ---------- 视图切换（模式切换不重载面板、不闪屏：选中背景平滑移动） ---------- */
+.pvp-viewtabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin: 0 16px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.pvp-viewtabs .pvp-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--pvp-accent-line);
+  background: var(--pvp-accent-soft);
+  transition: transform 240ms cubic-bezier(.22, 1.2, .36, 1), width 240ms cubic-bezier(.22, 1.2, .36, 1);
+}
+.pvp-viewtabs button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: rgba(232, 238, 242, 0.55);
+  font: 700 12px/1 inherit;
+  cursor: pointer;
+  transition: color 120ms linear;
+}
+.pvp-viewtabs button[aria-selected="true"] { color: #fff; }
+.pvp-viewtabs button:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 1px; }
+.pvp-viewtabs .pvp-incoming-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 5px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #6ee7b7;
+  font-size: 9px;
+}
+
+/* ---------- 分区与标签 ---------- */
+.pvp-sec { margin-top: 14px; }
+.pvp-sec:first-child { margin-top: 0; }
+.pvp-label { display: block; font-size: 11px; font-weight: 700; color: rgba(232, 238, 242, 0.6); margin-bottom: 6px; }
+.pvp-label .opt { color: rgba(232, 238, 242, 0.35); font-weight: 500; }
+
+/* ---------- 对手选择 ---------- */
+.pvp-pick-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--pvp-accent-line);
+  border-radius: 14px;
+  background: var(--pvp-accent-soft);
+  transition: border-color 180ms linear;
+}
+.pvp-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(191, 90, 242, 0.2);
+  color: #e6d3fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.pvp-pick-summary .nm { font-size: 13px; font-weight: 700; }
+.pvp-pick-summary .tier { font-size: 10px; color: rgba(232, 238, 242, 0.55); margin-top: 1px; }
+.pvp-clear-btn {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: none;
+  color: rgba(232, 238, 242, 0.55);
+  font-size: 11px;
+  cursor: pointer;
+}
+.pvp-clear-btn:hover { color: #fff; }
+
+.pvp-picker { border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 14px; background: rgba(0, 0, 0, 0.25); overflow: hidden; }
+.pvp-picker .search { position: relative; }
+.pvp-picker .search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: none;
+  color: #fff;
+  font-size: 12px;
+}
+.pvp-picker .search input::placeholder { color: rgba(232, 238, 242, 0.3); }
+.pvp-picker .search input:focus { outline: none; border-bottom-color: var(--pvp-accent-line); }
+.pvp-picker .list { max-height: 200px; overflow-y: auto; overscroll-behavior: contain; }
+.pvp-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: none;
+  color: inherit;
+  font: 500 12px/1.4 inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms linear, border-color 180ms linear;
+}
+.pvp-opt:last-child { border-bottom: 0; }
+.pvp-opt:hover { background: rgba(255, 255, 255, 0.05); }
+.pvp-opt:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: -2px; }
+.pvp-opt .tier { font-size: 10px; color: rgba(232, 238, 242, 0.45); margin-left: auto; }
+.pvp-opt-empty { padding: 16px; text-align: center; font-size: 11px; color: rgba(232, 238, 242, 0.4); }
+
+/* ---------- 模式选择（选中光晕 = 柔和，非 RGB） ---------- */
+.pvp-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.pvp-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(232, 238, 242, 0.75);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms linear, background 160ms linear, box-shadow 200ms linear, transform 120ms cubic-bezier(.22, 1.2, .36, 1);
+}
+.pvp-mode-chip:hover { background: rgba(255, 255, 255, 0.06); }
+.pvp-mode-chip:active { transform: scale(0.96); }
+.pvp-mode-chip:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 2px; }
+.pvp-mode-chip.on {
+  border-color: var(--pvp-accent-line);
+  background: var(--pvp-accent-soft);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(191, 90, 242, 0.18);   /* 选中柔和光晕 */
+}
+
+/* ---------- 时间与备注 ---------- */
+.pvp-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 13px;
+  color-scheme: dark;
+}
+.pvp-input:focus { outline: none; border-color: var(--pvp-accent-line); box-shadow: 0 0 0 1px var(--pvp-accent-line); }
+.pvp-textarea { width: 100%; min-height: 64px; resize: none; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.25); color: #fff; font-size: 12px; line-height: 1.5; color-scheme: dark; }
+.pvp-textarea:focus { outline: none; border-color: var(--pvp-accent-line); }
+.pvp-hint { margin-top: 4px; font-size: 10px; color: rgba(232, 238, 242, 0.35); }
+.pvp-counter { text-align: right; font-size: 10px; color: rgba(232, 238, 242, 0.35); margin-top: 3px; }
+
+/* ---------- 主按钮（Loading/Success 反馈；禁止无限闪烁） ---------- */
+.pvp-submit {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(191, 90, 242, 0.45);
+  background: linear-gradient(180deg, rgba(191, 90, 242, 0.30), rgba(191, 90, 242, 0.18));
+  color: #f2e7fd;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 120ms cubic-bezier(.22, 1.2, .36, 1), box-shadow 200ms linear, filter 120ms linear;
+}
+.pvp-submit:hover:not(:disabled) { filter: brightness(1.12); box-shadow: 0 4px 24px rgba(191, 90, 242, 0.22); }
+.pvp-submit:active:not(:disabled) { transform: scale(0.98); }
+.pvp-submit:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 2px; }
+.pvp-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.pvp-submit.success { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.16); color: #a7f3d0; }
+
+/* ---------- 状态卡（§14 状态 UI） ---------- */
+.pvp-state { border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(0, 0, 0, 0.25); padding: 14px; text-align: center; font-size: 12px; color: rgba(232, 238, 242, 0.7); }
+.pvp-state.err { border-color: rgba(251, 146, 60, 0.35); background: rgba(251, 146, 60, 0.08); color: #fdba74; }
+.pvp-state.ok { border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.08); color: #a7f3d0; }
+.pvp-state.unknown { border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.07); color: #fcd34d; }
+.pvp-state .big { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+.pvp-state .row { margin-top: 8px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pvp-mini-btn {
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(232, 238, 242, 0.85);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms cubic-bezier(.22, 1.2, .36, 1), background 120ms linear;
+}
+.pvp-mini-btn:hover { background: rgba(255, 255, 255, 0.09); }
+.pvp-mini-btn:active { transform: scale(0.96); }
+.pvp-mini-btn:focus-visible { outline: 2px solid var(--pvp-accent); outline-offset: 2px; }
+.pvp-mini-btn.acc { border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.12); color: #a7f3d0; }
+.pvp-mini-btn.acc:hover { background: rgba(52, 211, 153, 0.2); }
+.pvp-mini-btn.dgr { border-color: rgba(251, 146, 60, 0.4); background: rgba(251, 146, 60, 0.1); color: #fdba74; }
+.pvp-mini-btn.dgr:hover { background: rgba(251, 146, 60, 0.18); }
+
+/* ---------- 我的约战列表 ---------- */
+.pvp-ch-list { display: flex; flex-direction: column; gap: 8px; }
+.pvp-ch-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  transition: border-color 160ms linear;
+}
+.pvp-ch-item.pending { border-left: 2px solid var(--pvp-accent); }
+.pvp-ch-item.accepted { border-left: 2px solid #34d399; }
+.pvp-ch-item.closed { opacity: 0.72; }
+.pvp-ch-item .who { font-size: 12px; font-weight: 800; }
+.pvp-ch-item .meta { font-size: 11px; color: rgba(232, 238, 242, 0.6); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.pvp-ch-item .note { margin-top: 5px; font-size: 11px; color: rgba(232, 238, 242, 0.5); }
+.pvp-ch-item .acts { margin-left: auto; display: flex; flex-direction: column; gap: 5px; flex: none; }
+.pvp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid;
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pvp-st-pending { color: #d0a6f7; border-color: rgba(191, 90, 242, 0.38); background: rgba(191, 90, 242, 0.12); }
+.pvp-st-accepted { color: #6ee7b7; border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.1); }
+.pvp-st-rejected { color: #fdba74; border-color: rgba(251, 146, 60, 0.3); background: rgba(251, 146, 60, 0.1); }
+.pvp-st-cancelled, .pvp-st-expired, .pvp-st-failed { color: rgba(232, 238, 242, 0.45); border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04); }
+
+.pvp-box-title { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; color: rgba(232, 238, 242, 0.55); margin: 14px 0 8px; }
+.pvp-box-title:first-child { margin-top: 0; }
+.pvp-box-title .n { font-size: 10px; color: rgba(232, 238, 242, 0.35); font-weight: 500; }
+
+/* ---------- 减动效（工单 §4/§6：动画关闭时功能完全正常） ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pvp-entry-chip, .pvp-x, .pvp-mode-chip, .pvp-submit, .pvp-mini-btn, .pvp-clear-btn, .pvp-opt, .pvp-viewtabs .pvp-pill { transition: none !important; }
+}

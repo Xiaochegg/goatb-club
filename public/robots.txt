@@ -1,0 +1,39 @@
+# W4-T7 · AI 爬虫黑名单 + API/Admin 禁止抓取
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+# 所有其他爬虫：允许首页，禁止 API 和管理后台
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/

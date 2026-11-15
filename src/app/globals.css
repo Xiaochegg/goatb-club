@@ -1,0 +1,4737 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+/* FX 特效组件库共享 keyframes（fx-marquee/fx-shimmer/fx-flicker 等）— 见 src/components/fx/ */
+@import "../components/fx/fx-animations.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   断点系统（响应式规范：移动优先 + em 单位，全站仅 5 档）
+   ┌──────────┬─────────┬────────────────────────────────┐
+   │ 名称      │ em/px    │ 作用                            │
+   ├──────────┼─────────┼────────────────────────────────┤
+   │ 默认      │ <48em    │ 手机单列（全组件基础态）          │
+   │ sm / md  │ ≥48em    │ 平板：双列/侧栏出现               │
+   │ lg       │ ≥64em    │ 小桌面：双栏 grid + 胶囊导航栏     │
+   │ xl       │ ≥80em    │ 桌面：版心开始流态放宽             │
+   │ 3xl      │ ≥120em   │ 超大屏：只调侧栏宽/gap，不换布局    │
+   └──────────┴─────────┴────────────────────────────────┘
+   sm 从 Tailwind 默认 40em 提升到 48em 与规范平板边界对齐；
+   md/lg/xl 与 Tailwind 默认值(48/64/80rem)天然一致；
+   3xl 为新增超大屏档。em 断点随用户浏览器字号缩放 → 200% 字号
+   时布局自动降级到更小档，永不塌陷。                       */
+@theme {
+  --breakpoint-sm: 48em;
+  --breakpoint-3xl: 120em;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-jade-50: var(--jade-50);
+  --color-jade-100: var(--jade-100);
+  --color-jade-200: var(--jade-200);
+  --color-jade-300: var(--jade-300);
+  --color-jade-400: var(--jade-400);
+  --color-jade-500: var(--jade-500);
+  --color-jade-600: var(--jade-600);
+  --color-jade-700: var(--jade-700);
+  --color-jade-800: var(--jade-800);
+  --color-jade-900: var(--jade-900);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ============================================================
+   BEclub Premium Palette — Purple + Old Gold on Deep Navy
+   Brand: #1a1a2e base, #BF5AF2 purple accent, #D4AF37 old gold
+   ============================================================ */
+:root {
+  --radius: 0.625rem;
+
+  /* ============================================================
+     响应式排版系统 — 流态字体阶梯（clamp 全部带上限，断点间无跳变）
+     使用：font-size: var(--step-N)；正文默认 --step-0（body 已接）
+     ============================================================ */
+  --step--1: clamp(0.875rem, 0.85rem + 0.15vw, 1rem);
+  --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.25rem);
+  --step-1: clamp(1.125rem, 1.02rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.35rem, 1.15rem + 1vw, 1.875rem);
+  --step-3: clamp(1.7rem, 1.3rem + 2vw, 2.5rem);
+
+  /* 间距阶梯（rem 固定档，规范：间距一律 rem） */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-s: 1rem;
+  --space-m: 1.5rem;
+  --space-l: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  /* 流态沟槽：容器左右留白随屏宽微涨（clamp 三参带上限） */
+  --space-gutter: clamp(1rem, 0.75rem + 1.25vw, 2.5rem);
+
+  /* 版心：标准 1200px 封顶；120em+ 超大屏放宽至 1400px 封顶 */
+  --container-core: 75rem;
+  --container-core-max: 87.5rem;
+
+  /* Core surfaces — Deep navy base */
+  --background: #1a1a2e;
+  --foreground: #e8e8f0;
+
+  --card: #22223a;
+  --card-foreground: #e8e8f0;
+
+  --popover: #1e1e38;
+  --popover-foreground: #e8e8f0;
+
+  /* Primary accent: Purple — signature element */
+  --primary: #BF5AF2;
+  --primary-foreground: #1a0a2e;
+
+  /* Secondary accent: Old gold — rank, rewards, warnings */
+  --secondary: rgba(212, 175, 55, 0.12);
+  --secondary-foreground: #D4AF37;
+
+  /* Muted surfaces */
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #8e8e93;
+
+  /* Accent surface */
+  --accent: rgba(191, 90, 242, 0.08);
+  --accent-foreground: #BF5AF2;
+
+  /* Danger: Apple system red */
+  --destructive: #FF453A;
+
+  /* Borders & inputs */
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: rgba(191, 90, 242, 0.4);
+
+  /* Chart colors — Purple + Gold + complementary */
+  --chart-1: #BF5AF2;   /* Brand purple */
+  --chart-2: #D4AF37;   /* Old gold */
+  --chart-3: #64D2FF;   /* Diamond blue */
+  --chart-4: #8B5CF6;   /* Nether violet */
+  --chart-5: #5ce6e6;   /* Teal */
+
+  /* Sidebar */
+  --sidebar: #1a1a2e;
+  --sidebar-foreground: #e8e8f0;
+  --sidebar-primary: #BF5AF2;
+  --sidebar-primary-foreground: #1a0a2e;
+  --sidebar-accent: rgba(191, 90, 242, 0.08);
+  --sidebar-accent-foreground: #BF5AF2;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: rgba(191, 90, 242, 0.4);
+
+  /* ============================================================
+     Apple HIG Semantic Colors — Dark Mode (default)
+     ============================================================ */
+  --system-background: #000000;
+  --secondary-system-background: #1C1C1E;
+  --system-grouped-background: #000000;
+  --label: #FFFFFF;
+  --secondary-label: rgba(235, 235, 245, 0.6);
+  --tertiary-label: rgba(235, 235, 245, 0.3);
+  --separator: rgba(84, 84, 88, 0.65);
+  --system-blue: #0A84FF;
+  --system-green: #30D158;
+  --system-red: #FF453A;
+  --system-orange: #FF9F0A;
+  --system-yellow: #FFD60A;
+  --system-purple: #BF5AF2;
+  --system-teal: #64D2FF;
+  --system-pink: #FF6B9D;
+
+  /* ============================================================
+     Brand-specific tokens — Purple + Gold + Metal families
+     ============================================================ */
+  --jade: #BF5AF2;
+  --jade-light: #d8b3ef;
+  --jade-dark: #7e2aac;
+  --jade-glow: rgba(191, 90, 242, 0.35);
+
+  --gold: #D4AF37;
+  --gold-light: #E8C84A;
+  --gold-dark: #B8962E;
+  --gold-glow: rgba(212, 175, 55, 0.35);
+
+  --silver: #c0c8dc;
+  --silver-light: #d8dce8;
+  --silver-dark: #8a92a6;
+
+  --bronze: #cd7f32;
+  --bronze-light: #e0a050;
+  --bronze-dark: #a06020;
+
+  --xp-green: #BF5AF2;
+  --xp-green-glow: rgba(191, 90, 242, 0.3);
+
+  /* ============================================================
+     Purple Scale — brand color weight gradient
+     50=whisper  100=ghost  200=mist  300=glow  400=soft
+     500=brand   600=vivid  700=deep  800=rich  900=abyss
+     ============================================================ */
+  --jade-50:  #f7f0fc;
+  --jade-100: #ecd9f7;
+  --jade-200: #d8b3ef;
+  --jade-300: #c88ee8;
+  --jade-400: #c469e6;
+  --jade-500: #BF5AF2;   /* Brand signature */
+  --jade-600: #a13dd6;
+  --jade-700: #7e2aac;
+  --jade-800: #5e1d80;
+  --jade-900: #411056;
+}
+
+/* ============================================================
+   Light Mode — Apple HIG Semantic Colors
+   ============================================================ */
+.light, [data-theme="light"] {
+  --system-background: #FFFFFF;
+  --secondary-system-background: #F2F2F7;
+  --system-grouped-background: #F2F2F7;
+  --label: #000000;
+  --secondary-label: rgba(60, 60, 67, 0.6);
+  --tertiary-label: rgba(60, 60, 67, 0.3);
+  --separator: rgba(60, 60, 67, 0.29);
+  --system-blue: #007AFF;
+  --system-green: #34C759;
+  --system-red: #FF3B30;
+  --system-orange: #FF9500;
+  --system-yellow: #FFCC00;
+  --system-purple: #AF52DE;
+  --system-teal: #5AC8FA;
+  --system-pink: #FF2D78;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* 正文接流态阶梯（--step-0），无 text-* 类的文本随视口/用户根字号缩放 */
+    font-size: var(--step-0);
+    line-height: 1.6;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  /* 媒体基线：防 CLS + 防溢出（Tailwind preflight 已含，显式兜底） */
+  img, video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ============================================================
+   响应式工具类
+   ============================================================ */
+/* 版心：width: min(100% - 2×gutter, 1200px)；120em+ 放宽至 1400px 封顶 */
+.u-container {
+  width: min(100% - 2 * var(--space-gutter), var(--container-core));
+  margin-inline: auto;
+}
+@media (min-width: 120em) {
+  .u-container {
+    width: min(100% - 4rem, var(--container-core-max));
+  }
+}
+/* 长文本（玩家名/聊天/URL）：任意字符处可断行，绝不撑破容器 */
+.text-anywhere {
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================
+   Reduced motion — respect user preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Scrollbar utilities
+   ============================================================ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ============================================================
+   Old Gold gradient text (rank/reward context)
+   ============================================================ */
+.gold-text {
+  background: linear-gradient(135deg, #D4AF37 0%, #E8C84A 50%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gold-bar {
+  background: linear-gradient(90deg, #D4AF37 0%, #E8C84A 50%, #D4AF37 100%);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.3) inset;
+}
+
+/* ============================================================
+   SIGNATURE ELEMENT: GO luminous logo (Task 42)
+   "GO" 亮光质感——金紫双色渐变 + 光泽流动 + 多层光晕
+   仅用于 header brand "GO" 两字，配合汽车 SVG 图标
+   ============================================================ */
+.logo-go-glow {
+  background: linear-gradient(135deg, #FFD700 0%, #FFF4B8 25%, #D4AF37 50%, #BF5AF2 80%, #FFD700 100%);
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow:
+    0 0 6px rgba(255, 215, 0, 0.55),
+    0 0 14px rgba(212, 175, 55, 0.35),
+    0 0 24px rgba(191, 90, 242, 0.18);
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.4));
+  animation: logo-go-shimmer 3.6s ease-in-out infinite;
+}
+@keyframes logo-go-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ============================================================
+   Task 43: MC 像素字体类（Tailwind 4 @utility 注册，确保编译进 utilities layer）
+   - font-mc: Press Start 2P（方块像素，用于品牌/标签/单字符）
+   - PERF P1: font-mc-term/VT323 已移除——定义后零组件使用，白下载 ~12KB
+   - 中文回退系统字体（MC 中文版同理），拉丁字符用像素字体
+   ============================================================ */
+@utility font-mc {
+  font-family: var(--font-mc-pixel), "Press Start 2P", "Courier New", monospace;
+  letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   SIGNATURE ELEMENT: Jade glow
+   Premium purple shimmer — the one bold accent moment
+   ============================================================ */
+.jade-glow {
+  color: #BF5AF2;
+  text-shadow:
+    0 0 4px rgba(191, 90, 242, 0.4),
+    0 0 11px rgba(191, 90, 242, 0.25),
+    0 0 22px rgba(191, 90, 242, 0.12);
+}
+
+.jade-glow-animated {
+  color: #BF5AF2;
+  text-shadow:
+    0 0 4px rgba(191, 90, 242, 0.4),
+    0 0 11px rgba(191, 90, 242, 0.25),
+    0 0 22px rgba(191, 90, 242, 0.12);
+  animation: jade-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes jade-shimmer {
+  0%, 100% {
+    text-shadow:
+      0 0 4px rgba(191, 90, 242, 0.4),
+      0 0 11px rgba(191, 90, 242, 0.25),
+      0 0 22px rgba(191, 90, 242, 0.12);
+  }
+  50% {
+    text-shadow:
+      0 0 6px rgba(191, 90, 242, 0.6),
+      0 0 16px rgba(191, 90, 242, 0.4),
+      0 0 32px rgba(191, 90, 242, 0.2);
+  }
+}
+
+/* Legacy alias — redirects enchant-glow to jade */
+/* W5-fix: 加暗色 text-shadow 增加文字边缘与深色背景对比（发光层会稀释边缘，主体中位数对比度曾跌到 1.26）*/
+.enchant-glow { color: #BF5AF2; text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(191,90,242,0.4), 0 0 11px rgba(191,90,242,0.25), 0 0 22px rgba(191,90,242,0.12); }
+.enchant-glow-animated { color: #BF5AF2; text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 4px rgba(191,90,242,0.4), 0 0 11px rgba(191,90,242,0.25), 0 0 22px rgba(191,90,242,0.12); animation: jade-shimmer 4s ease-in-out infinite; }
+
+/* ============================================================
+   XP green glow (score display) — unified with jade
+   ============================================================ */
+.xp-glow {
+  color: #BF5AF2;
+  text-shadow: 0 0 8px rgba(191, 90, 242, 0.3);
+}
+
+/* ============================================================
+   Glassmorphism — premium iOS material feel
+   ============================================================ */
+.glass-modal {
+  background: rgba(26, 26, 46, 0.72);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-header {
+  background: rgba(26, 26, 46, 0.72);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   Nether purple glow (JIAHAO mode special)
+   ============================================================ */
+.nether-glow {
+  color: #9b30ff;
+  text-shadow: 0 0 8px rgba(155, 48, 255, 0.3);
+}
+
+/* ============================================================
+   Redstone red glow (danger/destructive)
+   ============================================================ */
+.redstone-glow {
+  color: #FF453A;
+  text-shadow: 0 0 6px rgba(255, 69, 58, 0.25);
+}
+
+/* ============================================================
+   Subtle pulse for live/active indicators
+   ============================================================ */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   3D Podium Cards — Top 3 player panels
+   Premium Apple-style: material light + brand color tint + shimmer
+   Desktop only; mobile fully disabled via @media guard
+   ============================================================ */
+
+/* Base shared podium traits (desktop only) */
+@media (hover: hover) and (pointer: fine) {
+  .podium-card {
+    contain: layout style paint;
+    will-change: transform;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+}
+
+/* 🥇 1st Place — Jade Champion */
+.podium-card-1 {
+  background: linear-gradient(145deg, #22223a 0%, #1a2e24 30%, #1a3a30 50%, #1c3a2c 70%, #1c2e28 100%);
+  border-color: rgba(191, 90, 242, 0.22);
+  box-shadow:
+    inset 1px 1px 0 rgba(191, 90, 242, 0.2),
+    inset 0 2px 8px rgba(191, 90, 242, 0.06),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(191, 90, 242, 0.06);
+}
+
+/* 🥈 2nd Place — Silver Elite */
+.podium-card-2 {
+  background: linear-gradient(145deg, #22223a 0%, #1e2038 30%, #22223c 50%, #20223a 70%, #1e1e38 100%);
+  border-color: rgba(192, 200, 220, 0.14);
+  box-shadow:
+    inset 1px 1px 0 rgba(192, 200, 220, 0.15),
+    inset 0 2px 6px rgba(192, 200, 220, 0.04),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* 🥉 3rd Place — Bronze Veteran */
+.podium-card-3 {
+  background: linear-gradient(145deg, #22223a 0%, #221c30 30%, #2a1e2c 50%, #261c2e 70%, #221c30 100%);
+  border-color: rgba(205, 127, 50, 0.16);
+  box-shadow:
+    inset 1px 1px 0 rgba(205, 127, 50, 0.15),
+    inset 0 2px 6px rgba(205, 127, 50, 0.04),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Rank number styles — premium gradient text */
+.rank-number-1 {
+  background: linear-gradient(135deg, #D4AF37 0%, #f0d060 50%, #b8962e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.75rem;
+  font-weight: 800;
+  filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.25));
+}
+
+.rank-number-2 {
+  background: linear-gradient(135deg, #c0c8dc 0%, #e0e4f0 50%, #a0a8bc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.rank-number-3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #e0a050 50%, #a06020 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+/* 1st place shimmer — desktop only */
+@media (hover: hover) and (pointer: fine) {
+  .podium-card-1::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(105deg, transparent 30%, rgba(191, 90, 242, 0.04) 45%, rgba(191, 90, 242, 0.08) 50%, rgba(191, 90, 242, 0.04) 55%, transparent 70%);
+    background-size: 250% 100%;
+    animation: jade-shimmer-sweep 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+@keyframes jade-shimmer-sweep {
+  0%, 100% { background-position: 200% 0%; }
+  50% { background-position: -50% 0%; }
+}
+
+/* Hover glow — desktop only, intensified material light */
+@media (hover: hover) and (pointer: fine) {
+  .podium-card-1.podium-hover {
+    border-color: rgba(191, 90, 242, 0.35);
+    box-shadow:
+      inset 1px 1px 0 rgba(191, 90, 242, 0.35),
+      inset 0 2px 8px rgba(191, 90, 242, 0.1),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      0 0 14px rgba(191, 90, 242, 0.14),
+      0 0 28px rgba(191, 90, 242, 0.06);
+  }
+  .podium-card-2.podium-hover {
+    border-color: rgba(192, 200, 220, 0.22);
+    box-shadow:
+      inset 1px 1px 0 rgba(192, 200, 220, 0.25),
+      inset 0 2px 6px rgba(192, 200, 220, 0.06),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+      0 3px 10px rgba(0, 0, 0, 0.35),
+      0 0 10px rgba(192, 200, 220, 0.08);
+  }
+  .podium-card-3.podium-hover {
+    border-color: rgba(205, 127, 50, 0.24);
+    box-shadow:
+      inset 1px 1px 0 rgba(205, 127, 50, 0.25),
+      inset 0 2px 6px rgba(205, 127, 50, 0.06),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 0 8px rgba(205, 127, 50, 0.07);
+  }
+}
+
+/* Mobile: preserve color identity, strip 3D + shimmer */
+@media (hover: none), (pointer: coarse), (max-width: 640px) {
+  .podium-card {
+    contain: none !important;
+    will-change: auto !important;
+    perspective: none !important;
+  }
+  .podium-card-1 {
+    background: linear-gradient(135deg, #22223a, #1a3232) !important;
+    border-color: rgba(191, 90, 242, 0.18) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+  .podium-card-1::before {
+    display: none !important;
+  }
+  .podium-card-2 {
+    background: linear-gradient(135deg, #22223a, #202038) !important;
+    border-color: rgba(192, 200, 220, 0.12) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  }
+  .podium-card-3 {
+    background: linear-gradient(135deg, #22223a, #261e2c) !important;
+    border-color: rgba(205, 127, 50, 0.12) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  }
+}
+
+/* ============================================================
+   Micro-interaction utilities — CSS-only Apple spring simulation
+   cubic-bezier(0.175, 0.885, 0.32, 1.075) ≈ Apple system spring
+   ============================================================ */
+
+/* Spring-press: buttons, tabs, controls */
+.spring-press {
+  transition: transform 150ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              box-shadow 200ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              border-color 200ms ease,
+              background-color 200ms ease;
+}
+.spring-press:hover {
+  transform: translateY(-1px);
+}
+.spring-press:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 100ms;
+}
+
+/* Spring-press-subtle: for small/icon buttons */
+.spring-press-subtle {
+  transition: transform 120ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              color 150ms ease,
+              background-color 150ms ease;
+}
+.spring-press-subtle:active {
+  transform: scale(0.93);
+  transition-duration: 80ms;
+}
+
+/* Spring-lift: cards, list items — subtle hover float */
+.spring-lift {
+  transition: transform 200ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              box-shadow 200ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              border-color 200ms ease;
+}
+.spring-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.spring-lift:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 100ms;
+}
+
+/* Spring-glow: interactive elements that glow on hover */
+.spring-glow {
+  transition: transform 150ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              box-shadow 200ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              border-color 200ms ease;
+}
+.spring-glow:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(191, 90, 242, 0.1);
+}
+.spring-glow:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Like button special: satisfying press + color shift */
+.like-spring {
+  transition: transform 150ms cubic-bezier(0.175, 0.885, 0.32, 1.075),
+              color 200ms ease,
+              scale 100ms cubic-bezier(0.175, 0.885, 0.32, 1.075);
+}
+.like-spring:active {
+  transform: scale(1.15);
+  transition-duration: 80ms;
+}
+
+/* ============================================================
+   Header Spring Split-Merge Animation
+   Two halves slide in from edges → merge at center with spring overshoot
+   Framer Motion drives this via motion.div with spring physics
+   CSS provides the visual polish: blur, scale, glow
+   ============================================================ */
+.header-split-left {
+  filter: blur(2px);
+  transform-origin: left center;
+}
+.header-split-right {
+  filter: blur(2px);
+  transform-origin: right center;
+}
+.header-merged {
+  filter: blur(0px);
+}
+/* Spring merge glow: brief jade flash when halves meet */
+@keyframes header-merge-glow {
+  0%   { box-shadow: 0 0 0px rgba(191, 90, 242, 0); }
+  40%  { box-shadow: 0 0 20px rgba(191, 90, 242, 0.15); }
+  100% { box-shadow: 0 0 0px rgba(191, 90, 242, 0); }
+}
+.header-merge-glow {
+  animation: header-merge-glow 800ms cubic-bezier(0.175, 0.885, 0.32, 1.075) forwards;
+}
+
+/* Slow spin for album cover */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* ============================================================
+   Premium utilities — high-end, minimal, purposeful
+   ============================================================ */
+
+/* Premium tooltip — appears above on hover, CSS-only */
+.premium-tip {
+  position: relative;
+}
+.premium-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.92);
+  background: rgba(10, 10, 26, 0.95);
+  color: #e8e8f0;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+  border: 1px solid rgba(255,255,255,0.08);
+  z-index: 60;
+}
+
+/* Accent underline — for active tab indicator (jade) */
+.accent-underline {
+  position: relative;
+}
+.accent-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: #BF5AF2;
+  border-radius: 1px;
+  box-shadow: 0 0 6px rgba(191, 90, 242, 0.4);
+}
+
+/* Refined surface card — subtle depth without heavy shadow */
+.surface-card {
+  background: #22223a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+/* Focus glow for search inputs (jade) */
+.search-focus:focus-within {
+  border-color: rgba(191, 90, 242, 0.3);
+  box-shadow: 0 0 0 1px rgba(191, 90, 242, 0.15);
+}
+
+/* Premium number — tabular, tight spacing for scores */
+.number-score {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
+}
+
+/* Refined divider line */
+.divider-refined {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 20%, rgba(255,255,255,0.06) 80%, transparent);
+}
+
+/* Desktop-only tooltip activation */
+@media (hover: hover) and (pointer: fine) {
+  .premium-tip:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Reduced motion: disable all spring simulations + shimmer */
+@media (prefers-reduced-motion: reduce) {
+  .spring-press,
+  .spring-press-subtle,
+  .spring-lift,
+  .spring-glow,
+  .like-spring {
+    transition-duration: 0ms !important;
+  }
+  .spring-press:hover,
+  .spring-lift:hover,
+  .spring-glow:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .podium-card-1::before {
+    animation: none !important;
+  }
+  .jade-glow-animated,
+  .enchant-glow-animated {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   LIQUID GLASS DESIGN SYSTEM
+   High-end frosted glass material with liquid transitions
+   — semi-transparent, soft refraction, subtle highlights,
+     background blur, layered depth
+   ═══════════════════════════════════════════════════════════
+   ============================================================ */
+
+:root {
+  /* Glass material tokens — layered translucency */
+  --glass-bg-1: rgba(255, 255, 255, 0.055);
+  --glass-bg-2: rgba(255, 255, 255, 0.035);
+  --glass-bg-3: rgba(255, 255, 255, 0.075);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.09);
+
+  --glass-border: rgba(255, 255, 255, 0.11);
+  --glass-border-strong: rgba(255, 255, 255, 0.18);
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+
+  --glass-highlight: rgba(255, 255, 255, 0.16);
+  --glass-highlight-soft: rgba(255, 255, 255, 0.08);
+
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.38);
+  --glass-shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.48);
+  --glass-shadow-dock: 0 12px 36px rgba(0, 0, 0, 0.42);
+
+  --glass-blur: 28px;
+  --glass-blur-strong: 40px;
+  --glass-saturate: 180%;
+
+  /* Liquid radius scale — generous, organic */
+  --radius-liquid-xs: 12px;
+  --radius-liquid-sm: 16px;
+  --radius-liquid-md: 22px;
+  --radius-liquid-lg: 28px;
+  --radius-liquid-xl: 36px;
+  --radius-liquid-pill: 999px;
+
+  /* Ambient light blobs — low-sat environment glow */
+  --ambient-jade: rgba(191, 90, 242, 0.05);
+  --ambient-gold: rgba(212, 175, 55, 0.035);
+  --ambient-cyan: rgba(100, 210, 255, 0.035);
+  --ambient-purple: rgba(191, 90, 242, 0.025);
+}
+
+/* ── Liquid Glass Materials ─────────────────────────────── */
+
+/* Base glass — default for cards, inputs, small panels */
+.liquid-glass {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass-bg-3) 0%, var(--glass-bg-1) 50%, var(--glass-bg-2) 100%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    var(--glass-shadow);
+}
+
+/* Subtle glass — for secondary surfaces, list items */
+.liquid-glass-subtle {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass-bg-1) 0%, var(--glass-bg-2) 100%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow: inset 0 1px 0 var(--glass-highlight-soft);
+}
+
+/* Strong glass — for hero panels, modals, dock */
+.liquid-glass-strong {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass-bg-elevated) 0%, var(--glass-bg-1) 100%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(200%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    var(--glass-shadow-elevated);
+}
+/* Override: when a component needs fixed positioning (floating panels,
+   toasts), Tailwind's .fixed must win over .liquid-glass-strong's
+   position:relative. Specificity (0,2,0) > (0,1,0); placed here so the
+   override relationship is visually obvious. Future cleanup option:
+   change .liquid-glass-strong to :where(.liquid-glass-strong) so any
+   Tailwind position class wins without this override. */
+.fixed.liquid-glass-strong {
+  position: fixed;
+}
+
+/* Signature top-edge gleam — the "glass" highlight */
+.liquid-glass::before,
+.liquid-glass-strong::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Liquid Glass Capsule Dock — unified bottom interaction center ─
+   V3（trace 1a1d6d98a9b358a5）：移动胶囊与桌面 dock 同用此材质。
+   磨砂玻璃（backdrop-filter 恒定值，无逐帧改模糊）+ 竖向凹槽棱镜
+   微纹理（Fluted Glass 致意，静态零成本）+ 层叠深度阴影。
+   FX-07 指针液态高光：useSpotlight 写 --sx/--sy，触点处玻璃亮起。 */
+.nav-capsule {
+  position: relative;
+  isolation: isolate;
+  background:
+    /* 竖向凹槽棱镜微纹理：极低透明度，给玻璃表面一丝折射质感 */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 7px),
+    /* 指针液态高光 */
+    radial-gradient(130px circle at var(--sx, 50%) var(--sy, -40%), rgba(255, 255, 255, 0.10), transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(255, 255, 255, 0.065) 100%);
+  /* 顺序纪律：-webkit- 在前、标准属性在后——Turbopack/lightningcss 对同族声明
+     只保留最后一条，若标准属性在前会被编译丢弃（V3-R2 缺陷实测） */
+  -webkit-backdrop-filter: blur(34px) saturate(200%) brightness(1.06);
+  backdrop-filter: blur(34px) saturate(200%) brightness(1.06);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    inset 0 0 16px rgba(255, 255, 255, 0.035),
+    0 14px 40px rgba(0, 0, 0, 0.46),
+    0 0 60px rgba(191, 90, 242, 0.04);
+  overflow: hidden;
+  will-change: transform;
+  transition: box-shadow 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* 不支持 backdrop-filter 的环境：实色可读底降级（V3 新增，站内首次覆盖导航玻璃） */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .nav-capsule {
+    background:
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, rgba(30, 32, 44, 0.97) 0%, rgba(20, 22, 32, 0.97) 100%);
+  }
+}
+
+/* Specular sheen — top highlight that shifts on long-press */
+.nav-capsule::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--spec-x, 14%);
+  right: var(--spec-x, 14%);
+  height: 44%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.02) 70%, transparent 100%);
+  border-radius: 999px 999px 50% 50%;
+  filter: blur(5px);
+  pointer-events: none;
+  z-index: 0;
+  transition: left 420ms cubic-bezier(0.2, 0.9, 0.2, 1), right 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* Luminous edge-light rim — thin glass border highlight.
+   V3：叠加对角反向的粉/青微色散停靠点（虹彩棱镜边缘，静态）。
+   FX-07：指针附近边缘泛金光（液态玻璃折射感） */
+.nav-capsule::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background:
+    radial-gradient(90px circle at var(--sx, 50%) var(--sy, -40%), rgba(212, 175, 55, 0.38), transparent 65%),
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.30) 0%,
+      rgba(255, 138, 216, 0.10) 20%,
+      rgba(255, 255, 255, 0.02) 38%,
+      rgba(255, 255, 255, 0.02) 62%,
+      rgba(122, 226, 255, 0.11) 80%,
+      rgba(255, 255, 255, 0.18) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Long-press glass response 已随扩展层一并退役（V3：交互反馈收敛到项级） */
+
+/* Nav item — icon + label button */
+.nav-capsule-item {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 240ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-capsule-item.is-active {
+  color: #ffffff;
+}
+.nav-capsule-item:hover:not(.is-active) {
+  color: rgba(232, 197, 95, 0.95);  /* FX-07 品牌金 hover */
+}
+
+/* Luminous glass indicator — morphs between items via layoutId.
+   V3 "厚透镜"：玻璃体 + 顶缘 gloss + 底部内投影（玻璃厚度）+
+   竖向凹槽微纹理 + 外紫晕金斑收敛。 */
+.nav-capsule-glow {
+  position: absolute;
+  inset: 3px;
+  z-index: 1;
+  border-radius: var(--radius-liquid-pill);
+  background:
+    /* 竖向凹槽棱镜微纹理（透镜厚度感） */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 6px),
+    radial-gradient(ellipse at 50% 0%, rgba(191, 90, 242, 0.36) 0%, rgba(191, 90, 242, 0.09) 55%, transparent 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(191, 90, 242, 0.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 0 rgba(191, 90, 242, 0.20),
+    0 4px 20px rgba(191, 90, 242, 0.26),
+    0 0 12px rgba(212, 175, 55, 0.16),
+    0 1px 5px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  overflow: hidden;
+}
+/* Top gloss sheen — travels with the capsule during slide */
+.nav-capsule-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.20) 0%, transparent 42%);
+  opacity: 0.85;
+  pointer-events: none;
+}
+/* Soft moving specular hotspot — adds life to the slide */
+.nav-capsule-glow::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 18%;
+  right: 18%;
+  height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.30), transparent 70%);
+  filter: blur(1.5px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* ── Active comet ring（V3 新增，Halo Border DNA 的 CSS 等效）──
+   一条金色彗星光沿选中透镜边环缓行（7s/圈，transform 合成器动画）。
+   仅 ACTIVE 透镜渲染 1 个实例；reduced-motion / 暂停动效时静止隐藏。 */
+.nav-capsule-glow-comet {
+  position: absolute;
+  inset: -42%;
+  display: block;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    transparent 0deg, transparent 238deg,
+    rgba(212, 175, 55, 0.00) 258deg,
+    rgba(212, 175, 55, 0.55) 292deg,
+    rgba(255, 255, 255, 0.85) 306deg,
+    rgba(191, 90, 242, 0.35) 322deg,
+    transparent 340deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1px));
+  /* 2026-11-14 部署验收整改：7s 彗星自转属常驻自行动画，实测被用户
+     报告为「胶囊在自己动」——停用无限循环，保留静态光环形态；
+     交互反馈（hover/tap 弹簧、透镜滑动）不受影响。 */
+  animation: none;
+  pointer-events: none;
+}
+/* 原自转轨迹（停用保留，供恢复参考）：
+@keyframes dock-comet-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+} */
+
+/* ── Light Sweep（V3 新增，玻璃内部光线流动）──
+   斜向光带每 9s 缓慢扫过一次胶囊内部，其余时间静止在左缘外
+   （55% 周期静止 → 不会变成频闪灯）；transform 合成器动画。 */
+.nav-capsule-sweep {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -34%;
+  width: 34%;
+  display: block;
+  background: linear-gradient(105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.035) 40%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.035) 60%,
+    transparent 100%);
+  transform: skewX(-14deg) translateX(0);
+  opacity: 0;
+  /* 2026-11-14 部署验收整改：9s Light Sweep 属常驻自行动画，同上停用；
+   * 元素保留（opacity:0 静态），减少态/暂停动效开关逻辑不变。 */
+  animation: none;
+  pointer-events: none;
+  z-index: 1;
+}
+/* 原扫光轨迹（停用保留，供恢复参考）：
+@keyframes dock-sweep {
+  0%, 52%  { transform: skewX(-14deg) translateX(0); opacity: 0; }
+  58%      { opacity: 1; }
+  86%      { opacity: 1; }
+  100%     { transform: skewX(-14deg) translateX(430%); opacity: 0; }
+} */
+
+/* 循环动效静止开关：系统级 reduce 或用户「暂停动效」开关
+   （data-motion-paused 由 LiquidGlassDock 写入） */
+@media (prefers-reduced-motion: reduce) {
+  .nav-capsule-sweep,
+  .nav-capsule-glow-comet {
+    animation: none;
+    opacity: 0;
+  }
+}
+.nav-capsule[data-motion-paused] .nav-capsule-sweep,
+.nav-capsule[data-motion-paused] .nav-capsule-glow-comet {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+/* ── 未读徽标（聊天项）——自 WidgetDock 迁入，视觉对齐胶囊语境 ── */
+.dock-unread-badge {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45), 0 0 0 2px rgba(10, 10, 22, 0.35);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── V3 胶囊尺寸上下文 ──
+   两断点统一 6 项。移动 44px：胶囊 282px → 390px 视口居中边距 54px，
+   360px 边距 39px，320px 边距 19px（均不溢出）。
+   注：mp-icon 收起圆钮已被既有规则全局隐藏
+   （.mp-icon{display:none!important}，管理员授权），无水平冲突前提；
+   旧 <386px 左对齐守卫随之退役。
+   桌面 46px 带 min(--ui-scale) 上限 58px（大档不推宽 dock）。
+   1024px 最窄桌面 dock ≈ 316px 居中左缘 ≈ 354px > 左下展开面板右缘 340px。
+   <330px 微型屏：项目缩至 40px 兜底（6×40+5×2+14 = 264px ≤ 320px） */
+.dock-zone > .nav-capsule {
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-liquid-pill);
+}
+.dock-zone > .nav-capsule .nav-capsule-item {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-liquid-pill);
+}
+.dock-desktop-zone > .nav-capsule {
+  padding: 7px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: var(--radius-liquid-pill);
+}
+.dock-desktop-zone > .nav-capsule .nav-capsule-item {
+  /* min() 上限 58px：--ui-scale 大档（≥1366）不再推宽 dock（见下方 64em 块注释） */
+  width: min(calc(46px * var(--ui-scale)), 58px);
+  height: min(calc(46px * var(--ui-scale)), 58px);
+  border-radius: var(--radius-liquid-pill);
+}
+.dock-desktop-zone {
+  display: none; /* <64em 隐藏；≥64em 在下方媒体查询开启 */
+}
+
+/* ── Capsule Card — flat-glass pill row for list items ──────
+   Deliberately NO backdrop-filter: a dozen blurred layers
+   re-rasterize on every frame of the re-rank FLIP animation
+   and cause mobile jank. The gradient glass reads identically
+   on the dark ambient background at a fraction of the cost. */
+.capsule-card {
+  position: relative;
+  border-radius: var(--radius-liquid-pill);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.028) 55%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-soft),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10),
+    0 4px 14px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  will-change: transform;
+  transition: border-color 240ms cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 240ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.capsule-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16%;
+  right: 16%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+  pointer-events: none;
+}
+.capsule-card:hover {
+  border-color: var(--glass-border);
+}
+
+/* Podium glow — gold / silver / bronze rim for top-3 capsules */
+.capsule-card-rank-1 {
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-soft),
+    inset 0 0 0 1px rgba(212, 175, 55, 0.22),
+    0 4px 18px rgba(212, 175, 55, 0.14);
+}
+.capsule-card-rank-2 {
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-soft),
+    inset 0 0 0 1px rgba(192, 200, 220, 0.18),
+    0 4px 18px rgba(192, 200, 220, 0.10);
+}
+.capsule-card-rank-3 {
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-soft),
+    inset 0 0 0 1px rgba(205, 127, 50, 0.18),
+    0 4px 18px rgba(205, 127, 50, 0.10);
+}
+
+/* Current-user capsule — jade identity ring (overrides podium) */
+.capsule-card-me {
+  border-color: rgba(191, 90, 242, 0.38);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight-soft),
+    inset 0 0 0 1px rgba(191, 90, 242, 0.16),
+    0 4px 20px rgba(191, 90, 242, 0.15);
+}
+
+/* ════════════════════════════════════════════════════════════
+   PvP Capsule Player Card — dark-navy vertical 4-band card
+   (rank badge + avatar + name + score / title + region /
+   TIERS label / 6 mode columns [kit icon + tier pill]).
+   Flat-glass (no backdrop-filter) for jank-free FLIP re-rank.
+   ════════════════════════════════════════════════════════════ */
+.pvp-card {
+  position: relative;
+  border-radius: 16px;
+  /* Deep navy/purple glass — layered tint over the jade ambient bg */
+  background:
+    linear-gradient(160deg, rgba(30, 30, 68, 0.62) 0%, rgba(20, 20, 45, 0.50) 55%, rgba(16, 16, 38, 0.55) 100%),
+    linear-gradient(180deg, rgba(120, 120, 220, 0.05) 0%, rgba(120, 120, 220, 0) 60%);
+  border: 1px solid rgba(120, 120, 220, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 180, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 20px rgba(0, 0, 0, 0.32);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  will-change: transform;
+  transition: border-color 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
+              box-shadow 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
+              background 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+/* Top gleam line */
+.pvp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 18%; right: 18%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(180, 180, 255, 0.30), transparent);
+  pointer-events: none;
+}
+.pvp-card:hover {
+  border-color: rgba(150, 150, 240, 0.32);
+  background:
+    linear-gradient(160deg, rgba(36, 36, 78, 0.70) 0%, rgba(24, 24, 52, 0.58) 55%, rgba(18, 18, 42, 0.62) 100%),
+    linear-gradient(180deg, rgba(140, 140, 240, 0.07) 0%, rgba(140, 140, 240, 0) 60%);
+}
+/* Keyboard focus ring (card is role=button, Tab-navigable) */
+.pvp-card:focus-visible {
+  outline: 2px solid rgba(191, 90, 242, 0.65);
+  outline-offset: 2px;
+}
+
+/* ── Rank rim variants (subtle, same structure for every card) ── */
+.pvp-card-rank-1 {
+  border-color: rgba(212, 175, 55, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 180, 255, 0.10),
+    inset 0 0 0 1px rgba(212, 175, 55, 0.18),
+    0 6px 24px rgba(212, 175, 55, 0.14);
+}
+.pvp-card-rank-2 {
+  box-shadow:
+    inset 0 1px 0 rgba(180, 180, 255, 0.10),
+    inset 0 0 0 1px rgba(192, 200, 220, 0.14),
+    0 6px 22px rgba(0, 0, 0, 0.32);
+}
+.pvp-card-rank-3 {
+  box-shadow:
+    inset 0 1px 0 rgba(180, 180, 255, 0.10),
+    inset 0 0 0 1px rgba(205, 127, 50, 0.14),
+    0 6px 22px rgba(0, 0, 0, 0.32);
+}
+/* Current user — jade identity ring (overrides podium) */
+.pvp-card-me {
+  border-color: rgba(191, 90, 242, 0.40);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 180, 255, 0.10),
+    inset 0 0 0 1px rgba(191, 90, 242, 0.18),
+    0 6px 24px rgba(191, 90, 242, 0.16);
+}
+
+/* ── Band 1: rank badge ── */
+.pvp-rank-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, rgba(60, 60, 100, 0.55), rgba(30, 30, 60, 0.55));
+  border: 1px solid rgba(140, 140, 220, 0.22);
+  box-shadow: inset 0 1px 0 rgba(180, 180, 255, 0.12);
+  flex-shrink: 0;
+}
+.pvp-rank-num {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: -0.02em;
+}
+.pvp-rank-gold {
+  background: linear-gradient(160deg, #fde68a 0%, #fbbf24 45%, #d97706 100%);
+  border-color: rgba(253, 224, 138, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 8px rgba(251, 191, 36, 0.30);
+}
+.pvp-rank-gold .pvp-rank-num { color: #422a06; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+.pvp-rank-silver {
+  background: linear-gradient(160deg, #f1f5f9 0%, #cbd5e1 45%, #94a3b8 100%);
+  border-color: rgba(241, 245, 249, 0.50);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 8px rgba(148, 163, 184, 0.25);
+}
+.pvp-rank-silver .pvp-rank-num { color: #1e293b; }
+.pvp-rank-bronze {
+  background: linear-gradient(160deg, #fdba74 0%, #fb923c 45%, #c2410c 100%);
+  border-color: rgba(253, 186, 116, 0.50);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.40), 0 2px 8px rgba(251, 146, 60, 0.25);
+}
+.pvp-rank-bronze .pvp-rank-num { color: #3b1404; }
+
+/* ── Band 1: avatar ── */
+.pvp-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(180, 180, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.pvp-card-rank-1 .pvp-avatar { border-color: rgba(251, 191, 36, 0.45); }
+.pvp-card-me .pvp-avatar { border-color: rgba(191, 90, 242, 0.50); }
+
+/* ── Band 1: name + meta ── */
+.pvp-name {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.pvp-you-tag {
+  font-size: 8px;
+  font-weight: 800;
+  color: #c88ee8;
+  background: rgba(191, 90, 242, 0.20);
+  border: 1px solid rgba(191, 90, 242, 0.30);
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+}
+.pvp-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.50);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pvp-meta-sep { color: rgba(255, 255, 255, 0.22); }
+
+/* ── Band 1: score + like ──────────────────────────────────
+   Score 17px: spec asks 13-14px but the score is the card's
+   primary number on a leaderboard — 17px keeps hierarchy while
+   staying close to spec (self-review compromise). */
+.pvp-score {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  color: #4ade80;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.30);
+}
+.pvp-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 999px;
+  /* 44×44 minimum touch target per spec (self-review fix, was 38) */
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 200ms, background 200ms, border-color 200ms;
+}
+.pvp-like-btn:hover {
+  color: #ff6b9d;
+  background: rgba(255, 107, 157, 0.10);
+  border-color: rgba(255, 107, 157, 0.22);
+}
+
+/* ── Band 2: identity row (title + region + rank-change) ── */
+.pvp-identity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -2px;
+}
+.pvp-title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.16), rgba(251, 191, 36, 0.06));
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.pvp-title-icon { font-size: 11px; line-height: 1; }
+.pvp-title-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fde68a;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.pvp-region-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  border: 1px solid;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ── Band 3: TIERS label ── */
+.pvp-tiers-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgba(220, 220, 255, 0.55);
+  margin-top: 2px;
+  line-height: 1;
+}
+
+/* ── Band 4: 6 mode columns (kit icon + tier pill) ── */
+.pvp-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.pvp-mode-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.pvp-mode-col-active .pvp-kit-icon {
+  border-color: rgba(191, 90, 242, 0.55);
+  box-shadow: inset 0 1px 0 rgba(180, 180, 255, 0.12), 0 0 0 1px rgba(191, 90, 242, 0.20), 0 0 10px rgba(191, 90, 242, 0.18);
+}
+.pvp-kit-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 35% 30%, rgba(40, 40, 80, 0.85), rgba(15, 15, 30, 0.92));
+  border: 1px solid rgba(150, 150, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(180, 180, 255, 0.10);
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 200ms, border-color 200ms;
+}
+.pvp-mode-col:hover .pvp-kit-icon { transform: translateY(-1px); }
+/* Empty / unranked slot — hollow dashed circle */
+.pvp-kit-empty {
+  background: rgba(15, 15, 30, 0.45);
+  border: 1px dashed rgba(150, 150, 200, 0.22);
+  box-shadow: none;
+  opacity: 0.7;
+}
+.pvp-kit-empty span { opacity: 0.45; }
+
+/* Tier pill (HT purple / LT gray) — inline style sets bg/border/color */
+.pvp-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  min-width: 100%;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  border: 1px solid;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  white-space: nowrap;
+}
+.pvp-tier-empty {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.28);
+}
+
+/* ── PlayerDetailModal · Back Button (golden-ratio inset) ─────
+   The 36px frosted circle anchors the modal's top-left corner.
+   Edge padding derives from the button itself at the golden
+   ratio: inset = size × 0.618 ≈ 22.25px — fully drawn, never
+   clipped by the panel's overflow, with a φ-harmonious band of
+   breathing room (content starts at 70px). ::after expands the
+   touch target to 46px ≥ 44px a11y minimum without enlarging
+   the visual glyph. */
+.pvp-modal-back {
+  position: absolute; /* .liquid-glass-subtle sets relative (unlayered CSS
+                         beats Tailwind's layered .absolute) — without this
+                         the button joins flow and offsets become relative
+                         shifts (the historical clipped-arrow bug) */
+  --back-size: 36px;
+  top: calc(var(--back-size) * 0.618);
+  left: calc(var(--back-size) * 0.618);
+  width: var(--back-size);
+  height: var(--back-size);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.pvp-modal-back::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 9999px;
+}
+
+/* ── Player modal scroll fade（数字外露修复 2026-10）─────────
+   用户实测反馈（IMG_1583）：面板下滚后，统计卡数字滑进半透明
+   玻璃返回按钮底下「透」出来。方案：给滚动容器加垂直 mask，
+   内容进入顶部 56-70px 保留带时渐隐为全透明 — 按钮下方永远
+   没有可读内容，任何主题（含 DIY 自定义色）都零接缝。
+   边界对齐：pt-[70px] 保留带 = mask 渐变终点，静止时首卡
+   完整可见（scrollport y=70px 恰好全显）。 */
+.pvp-scroll-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 56px, #000 70px);
+  mask-image: linear-gradient(to bottom, transparent 0, transparent 56px, #000 70px);
+}
+
+/* ── Theme-aware Player Detail Modal — inverted surface ────
+   The panel surface INVERTS the active theme: dark themes get a
+   light frosted-glass panel with dark text (and vice-versa), so
+   player detail content stays readable no matter which ambient
+   theme is active. Per-theme colors arrive as inline CSS custom
+   properties (--panel-*) on the modal root, set by
+   getThemePanelPalette() in constants.ts. The scope below maps
+   those to the semantic tokens (--label, --glass-bg-*, system
+   colors) that the existing .liquid-glass-strong / .liquid-glass-
+   subtle / text-[var(--label)] utilities already consume — so the
+   whole modal re-skins automatically when the theme changes. */
+.pvp-modal-themed {
+  /* Semantic text — inverted for the (light) panel surface */
+  --label: var(--panel-text, #1A1A1A);
+  --secondary-label: var(--panel-text-secondary, rgba(60, 60, 67, 0.6));
+  --tertiary-label: var(--panel-text-tertiary, rgba(60, 60, 67, 0.3));
+  --separator: var(--panel-border, rgba(60, 60, 67, 0.18));
+
+  /* Glass material — light translucent surface tinted with theme */
+  --glass-bg-1: var(--panel-surface-alt, rgba(255, 255, 255, 0.82));
+  --glass-bg-2: var(--panel-surface-soft, rgba(255, 255, 255, 0.68));
+  --glass-bg-3: var(--panel-surface, rgba(255, 255, 255, 0.94));
+  --glass-bg-elevated: var(--panel-surface, rgba(255, 255, 255, 0.94));
+
+  --glass-border: var(--panel-border, rgba(0, 0, 0, 0.10));
+  --glass-border-strong: var(--panel-border, rgba(0, 0, 0, 0.12));
+  --glass-border-subtle: var(--panel-border-subtle, rgba(0, 0, 0, 0.06));
+
+  --glass-highlight: rgba(255, 255, 255, 0.55);
+  --glass-highlight-soft: rgba(255, 255, 255, 0.32);
+
+  /* Brand accent shades — darkened for light-bg readability */
+  --jade-300: #7e2aac;
+  --secondary-foreground: #B8962E;
+
+  /* Apple HIG system colors — light-mode variants (darker, readable
+     on the light panel surface) */
+  --system-blue: #007AFF;
+  --system-green: #248A3D;
+  --system-red: #D70015;
+  --system-orange: #C93400;
+  --system-yellow: #B89400;
+  --system-purple: #AF52DE;
+  --system-teal: #30B0C7;
+  --system-pink: #FF2D55;
+}
+
+/* Inner subtle-glass blocks — lighter fill so layered cards read
+   cleanly on the light panel (not muddy gray) */
+.pvp-modal-themed .liquid-glass-subtle {
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.58) 0%,
+    rgba(255, 255, 255, 0.34) 100%);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow: inset 0 1px 0 var(--glass-highlight-soft);
+}
+
+/* Tier badge — light-bg friendly border + shadow */
+.pvp-modal-themed .liquid-tier-badge {
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 1px 3px rgba(0, 0, 0, 0.10);
+}
+
+/* Score glow — deeper jade for contrast on light, softer halo */
+.pvp-modal-themed .liquid-score {
+  color: #7e2aac;
+  text-shadow: 0 0 6px rgba(191, 90, 242, 0.18);
+}
+
+/* Level badge — deeper jade on light */
+.pvp-modal-themed .liquid-level-badge {
+  background: linear-gradient(135deg, rgba(191, 90, 242, 0.22) 0%, rgba(191, 90, 242, 0.10) 100%);
+  border: 1px solid rgba(191, 90, 242, 0.35);
+  color: #7e2aac;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Back button — soften shadow for the light panel */
+.pvp-modal-themed .pvp-modal-back {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 4px 14px rgba(0, 0, 0, 0.14);
+}
+
+/* Mode chip — base (dark-theme fallback, matches original look) */
+.pvp-mode-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+/* Mode chip — themed (light panel): dark-tint fills replace the
+   white/[0.03] which would vanish on a light surface */
+.pvp-modal-themed .pvp-mode-chip {
+  background: rgba(0, 0, 0, 0.035);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ── 详情面板模式矩阵卡（工单 2026-11-12：徽章/名次错位根因修复）──
+   玩家详情面板的模式卡此前复用 .pvp-mode-chip 类名，而该类在
+   pvp.css 带 inline-flex 布局（非分层样式优先级高于 Tailwind 工具层），
+   把矩阵卡的两行内容横排挤压 —— 徽章与名次重叠的真正根源。
+   新类 .pvp-mode-tile 只承接配色，布局全由组件层 Tailwind 负责。 */
+.pvp-mode-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.pvp-modal-themed .pvp-mode-tile {
+  background: rgba(0, 0, 0, 0.035);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ── 模式矩阵图标统一暗底芯片（批示 trace 1a1d027ae7f6abd1「图标错位」根因）──
+   XT 实拍图标带 mix-blend-mode: screen（为暗底榜单设计），直接裸放在
+   详情面板浅色卡上时暗部被溶解成碎片（矛锤等图标近乎消失），观感即
+   「图标错位/异常」；各图内容占框率不一还造成光学大小参差。
+   统一 16px 暗底芯片：① 为 screen 混合提供设计基底（浅深主题双稳）；
+   ② isolation:isolate 把混合封闭在芯片内不污染卡片；③ 统一光学框。 */
+.pi-mode-ico {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: linear-gradient(145deg, #1b2030, #0f131d);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Progress track — base (dark-theme fallback) */
+.pvp-progress-track {
+  background: rgba(255, 255, 255, 0.07);
+}
+/* Progress track — themed (light panel) */
+.pvp-modal-themed .pvp-progress-track {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Liquid Ambient Background — deep gradient + color blobs ─ */
+.liquid-ambient-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 15% 0%, var(--ambient-jade), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 85% 15%, var(--ambient-gold), transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 95%, var(--ambient-cyan), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, var(--ambient-purple), transparent 50%),
+    var(--background);
+  /* 滑动卡顿修复（用户反馈 2026-10）：background-attachment: fixed 会让
+     Chromium 每个滚动帧整屏重绘背景，是经典滚动卡顿源；根容器的背景
+     实际由 page.tsx inline style（--goatb-bg 变量）提供，此处的渐变
+     仅为无 inline 时的兜底，滚动跟随即可。 */
+}
+
+/* ── Capsule Shell — modular liquid-glass widget capsule ─── */
+.capsule-shell {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.035) 45%, rgba(255, 255, 255, 0.07) 100%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(200%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 14px 44px rgba(0, 0, 0, 0.5),
+    0 0 70px rgba(191, 90, 242, 0.05);
+  overflow: hidden;
+  will-change: transform;
+  transition: box-shadow 450ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.capsule-shell:hover {
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+    0 18px 52px rgba(0, 0, 0, 0.55),
+    0 0 90px rgba(191, 90, 242, 0.08);
+}
+
+/* Top specular highlight line */
+.capsule-shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Ambient aura behind identity core */
+.capsule-shell::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 70%;
+  background: radial-gradient(ellipse, rgba(191, 90, 242, 0.07), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Capsule Module — plug-in glass widget block ─────────── */
+.capsule-module {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.022) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--radius-liquid-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Assemble mode: dashed plug-in aesthetic + grab cursor */
+.capsule-module-drag {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.18);
+  cursor: grab;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+.capsule-module-drag:active {
+  cursor: grabbing;
+}
+.capsule-module-dragging {
+  cursor: grabbing;
+  z-index: 30;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.06) 100%);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ── Capsule Chip — small frosted pill ───────────────────── */
+.capsule-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-liquid-pill);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+
+/* ── Capsule Rail — swipeable horizontal chip rail ───────── */
+.capsule-rail {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent);
+}
+.capsule-rail::-webkit-scrollbar {
+  display: none;
+}
+.capsule-rail > * {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+.capsule-rail-pointer {
+  cursor: grab;
+}
+.capsule-rail-pointer:active {
+  cursor: grabbing;
+}
+
+/* Grip dots for drag handle */
+.capsule-grip {
+  color: rgba(255, 255, 255, 0.22);
+  cursor: grab;
+}
+
+/* ── Liquid Transitions ──────────────────────────────────── */
+
+/* Enter: scale + translate + opacity + blur refraction */
+@keyframes liquid-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+    filter: blur(8px);
+  }
+  60% {
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Exit: collapse to capsule then dissolve */
+@keyframes liquid-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  40% {
+    transform: scale(0.94) translateY(-8px);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) translateY(24px);
+    filter: blur(8px);
+  }
+}
+
+/* Expand: from capsule to full panel */
+@keyframes liquid-expand {
+  0% {
+    transform: scaleY(0.4) scaleX(0.85);
+    opacity: 0;
+    border-radius: var(--radius-liquid-pill);
+  }
+  100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+    border-radius: var(--radius-liquid-lg);
+  }
+}
+
+/* Flow: horizontal content slide for tab switching */
+@keyframes liquid-flow-in {
+  0% {
+    opacity: 0;
+    transform: translateX(24px) scale(0.97);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes liquid-flow-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.97);
+    filter: blur(6px);
+  }
+}
+
+/* Glass shimmer — subtle moving light refraction on hero */
+@keyframes glass-shimmer {
+  0% { background-position: -200% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.liquid-shimmer-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.04) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: glass-shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Liquid Interaction Utilities ────────────────────────── */
+
+/* Liquid press — bouncy scale on tap */
+.liquid-press {
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 250ms ease,
+              border-color 250ms ease;
+}
+.liquid-press:active {
+  transform: scale(0.96);
+  transition-duration: 100ms;
+}
+
+/* Liquid float — subtle hover lift for cards */
+.liquid-float {
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 300ms ease,
+              border-color 300ms ease,
+              background-color 300ms ease;
+}
+.liquid-float:hover {
+  transform: translateY(-2px);
+}
+
+/* Liquid pill — for tabs and toggle buttons */
+.liquid-pill {
+  position: relative;
+  transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              color 200ms ease,
+              background-color 200ms ease,
+              border-color 200ms ease;
+}
+.liquid-pill:active {
+  transform: scale(0.94);
+  transition-duration: 90ms;
+}
+
+/* Active liquid pill — filled glass with jade tint */
+.liquid-pill-active {
+  background: linear-gradient(135deg, rgba(191, 90, 242, 0.12) 0%, rgba(191, 90, 242, 0.06) 100%);
+  border: 1px solid rgba(191, 90, 242, 0.25);
+  color: #c88ee8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 12px rgba(191, 90, 242, 0.08);
+}
+
+/* ── Liquid Tier Badge — glass-encased tier label ────────── */
+.liquid-tier-badge {
+  position: relative;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Liquid Rank Number — for top-3 ──────────────────────── */
+.liquid-rank-1 {
+  background: linear-gradient(135deg, #D4AF37 0%, #F0D060 40%, #E8C84A 60%, #B8962E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.35));
+}
+
+.liquid-rank-2 {
+  background: linear-gradient(135deg, #C0C8DC 0%, #E0E4F0 40%, #D8DCE8 60%, #8A92A6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  filter: drop-shadow(0 0 6px rgba(192, 200, 220, 0.25));
+}
+
+.liquid-rank-3 {
+  background: linear-gradient(135deg, #CD7F32 0%, #E0A050 40%, #D89040 60%, #A06020 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  filter: drop-shadow(0 0 5px rgba(205, 127, 50, 0.25));
+}
+
+/* ── Liquid Divider — gradient fade ──────────────────────── */
+.liquid-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border) 20%, var(--glass-border) 80%, transparent);
+}
+
+/* ── Liquid Score Glow — refined jade for scores ─────────── */
+.liquid-score {
+  color: #d8b3ef;
+  text-shadow: 0 0 8px rgba(191, 90, 242, 0.25);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
+}
+
+/* ── Rank change indicators ──────────────────────────────── */
+.liquid-rank-up {
+  color: #30D158;
+  text-shadow: 0 0 4px rgba(48, 209, 88, 0.2);
+}
+.liquid-rank-down {
+  color: #FF453A;
+  text-shadow: 0 0 4px rgba(255, 69, 58, 0.2);
+}
+.liquid-rank-same {
+  color: var(--tertiary-label);
+}
+
+/* ── Safe area for dock ──────────────────────────────────── */
+.dock-safe-area {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Reduced motion: liquid animations ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-press,
+  .liquid-float,
+  .liquid-pill,
+  .liquid-dock-item {
+    transition-duration: 0.01ms !important;
+  }
+  .liquid-shimmer-overlay {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT SYSTEM
+   Mobile: single column + bottom dock
+   Tablet: two-column where appropriate
+   Desktop: three-column (left player / center board / right stats)
+            + side floating rail dock
+   ═══════════════════════════════════════════════════════════
+   ============================================================ */
+
+/* ============================================================
+   ═══════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT SYSTEM（em 断点，规范 5 档）
+   默认（<48em）：手机单列 + 底部 dock
+   ≥48em（sm/md）：平板，双列视情况启用
+   ≥64em（lg）：小桌面，双区（列表/侧栏）+ 侧浮胶囊导航
+   ≥80em（xl）：桌面，版心开始流态放宽（1200 → 1920px 硬顶），
+                仪表盘壳层随屏铺开，不换布局、无断点跳变
+   ≥120em（3xl）：超大屏，只调侧栏宽/gap，不换布局
+
+   版心策略（2026-11-01 宽屏修复：超宽屏/缩放视图下 1400px
+   版心只占屏一半，内容悬空、导航胶囊孤悬屏幕边缘）——
+   纯文本容器用 .u-container（1200/1400 封顶，保证行长）；
+   仪表盘壳层 .lg-two-col 用 clamp(1200px, 73vw, 1920px) 流态放宽：
+   73vw 使 1920px 视口时恰为 1400px（与旧 3xl 封顶连续），
+   2632px+ 触顶 1920px，4K 不再变化。
+   ═══════════════════════════════════════════════════════════
+   ============================================================ */
+
+/* ── Desktop two-column grid（≥64em 小桌面）───────────────
+   版心规范写法：width: min(100% - 2×gutter, 1200px)；
+   侧栏固定 300px 不随屏膨胀，列表列 minmax(0,1fr) 防溢出；
+   （V3：导航胶囊改底部居中 dock，原 padding-left: 4.5rem
+   竖轨让位区移除，版心恢复对称居中） */
+@media (min-width: 64em) {
+  .lg-two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) calc(300px * var(--ui-scale));
+    gap: var(--space-m);
+    align-items: start;
+    width: min(100% - 2 * var(--space-gutter), var(--container-core));
+    margin-inline: auto;
+  }
+
+  /* Sticky side columns：dvh 防移动端地址栏误算；
+     不用 overflow-x:hidden 掩盖溢出 —— 由 minmax(0,1fr)+min-width:0 根治 */
+  .lg-sticky-left {
+    position: sticky;
+    top: 5rem;
+    min-width: 0;
+    max-height: calc(100dvh - 6.25rem);
+    overflow-y: auto;
+  }
+  .lg-sticky-right {
+    position: sticky;
+    top: 5rem;
+    min-width: 0;
+    max-height: calc(100dvh - 6.25rem);
+    overflow-y: auto;
+  }
+
+  /* Hide mobile-only elements on desktop */
+  .lg-hide-desktop {
+    display: none !important;
+  }
+}
+
+/* ── ≥80em 桌面：版心流态放宽（1200 → 1920px 硬顶）────────
+   clamp 三参连续 → 断点两侧零跳变：
+   · 1280px 视口：73vw=934 < 1200 下限 → 恰 1200px（与 64em 档衔接）
+   · 1646px 起线性增长，1920px 视口时恰 1400px
+   · 2632px 视口触顶 1920px，2880/4K 不再变化
+   （V3：导航胶囊 wrap 已退役，宽度同步只剩壳层自身） */
+@media (min-width: 80em) {
+  .lg-two-col {
+    width: min(100% - 4rem, clamp(var(--container-core), 73vw, 120rem));
+  }
+}
+
+/* ── ≥120em 超大屏：只调侧栏宽/gap，不换布局 ──────────── */
+@media (min-width: 120em) {
+  .lg-two-col {
+    grid-template-columns: minmax(0, 1fr) calc(340px * var(--ui-scale));
+    gap: var(--space-l);
+  }
+}
+
+/* ── Tablet two-column（48em ≤ 视口 < 64em）───────────────── */
+@media (min-width: 48em) and (max-width: 63.9375em) {
+  .md-two-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-s);
+  }
+}
+
+/* ── Desktop dock — bottom-center liquid glass dock（≥64em）──
+   V3：左竖轨退役，导航成为整个网站底部统一交互中心（trace 1a1d6d98a9b358a5）。
+   zone 层只负责"底部居中 + 指针穿透"，胶囊本体尺寸见上方 .dock-desktop-zone
+   上下文块；framer-motion 入场/悬停 transform 与 fixed 定位零冲突。
+   左下角音乐播放器展开面板（mp-root 320px 宽，冻结件）避让由宽度数学保证：
+   1024px 最窄桌面实测 dock 340px 居中左缘 342 > 播放器右缘 340（2px 净距，
+   1024 档 --ui-scale=1.12 使 item 达 51.5px；实测零重叠，见验收记录）；
+   item 带 min(--ui-scale) 上限 58px 防更大档位推宽。
+   桌面 footer 以 76px 底部预算让位（footer.tsx）。 */
+@media (min-width: 64em) {
+  .dock-desktop-zone {
+    display: flex;               /* 覆盖基础态 display:none（未分层 CSS 优先） */
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 40;
+    pointer-events: none;
+  }
+
+  /* Tooltip — appears above the dock item（旧竖轨右置位退役） */
+  .dock-desktop-zone .nav-capsule-item::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%) scale(0.92);
+    background: rgba(10, 10, 26, 0.95);
+    color: #e8e8f0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 150ms ease, transform 150ms ease;
+    border: 1px solid rgba(212, 175, 55, 0.22);  /* FX-07 金边呼应品牌 */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    z-index: 60;
+  }
+  .dock-desktop-zone .nav-capsule-item:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* Hide the mobile bottom capsule on desktop */
+  .mobile-dock-only {
+    display: none !important;
+  }
+}
+
+/* ── <330px 微型屏兜底（见上方尺寸上下文注释）── */
+@media (max-width: 329px) {
+  .dock-zone > .nav-capsule .nav-capsule-item {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ── Fluid expand/collapse for player panel ──────────────── */
+.liquid-expand-container {
+  overflow: hidden;
+  transform-origin: top center;
+}
+
+/* ── Level badge ─────────────────────────────────────────── */
+.liquid-level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-liquid-pill);
+  background: linear-gradient(135deg, rgba(191, 90, 242, 0.15) 0%, rgba(191, 90, 242, 0.06) 100%);
+  border: 1px solid rgba(191, 90, 242, 0.25);
+  color: #c88ee8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ── Board type tag (on player cards) ────────────────────── */
+.liquid-board-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.liquid-board-tag-tier {
+  background: rgba(212, 175, 55, 0.08);
+  color: #D4AF37;
+  border-color: rgba(212, 175, 55, 0.18);
+}
+
+/* ── Rank change indicator ───────────────────────────────── */
+.liquid-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  padding: 2px 5px;
+  border-radius: 6px;
+  min-width: 32px;
+  justify-content: center;
+}
+.liquid-change-up {
+  color: #30D158;
+  background: rgba(48, 209, 88, 0.08);
+}
+.liquid-change-down {
+  color: #FF453A;
+  background: rgba(255, 69, 58, 0.08);
+}
+.liquid-change-same {
+  color: var(--tertiary-label);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Level progress bar ──────────────────────────────────── */
+.liquid-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.liquid-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #BF5AF2 0%, #d8b3ef 100%);
+  box-shadow: 0 0 8px rgba(191, 90, 242, 0.4);
+  transition: width 600ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* ── Desktop stat card ───────────────────────────────────── */
+.liquid-stat-card {
+  padding: 14px;
+  border-radius: var(--radius-liquid-md);
+}
+
+/* ── Horizontal flow transition for board switching ──────── */
+.liquid-flow-container {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Premium spring curve (cubic-bezier 0.2, 0.9, 0.2, 1) ─ */
+.liquid-spring-curve {
+  transition-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* ============================================================
+   Minecraft DNA (spec §28) — subtle pixel/HUD accents.
+   Not a full reskin; layered onto the existing Liquid Glass
+   system so the product reads as "game-adjacent" without
+   becoming a Minecraft wiki.
+   ============================================================ */
+
+/* Pixel-grid border — 2px stepped corners reminiscent of MC UI */
+.mc-pixel-border {
+  /* simulate pixel corners via box-shadow steps (no image needed) */
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.06),
+    0 0 0 3px rgba(0, 0, 0, 0.3);
+  border-radius: 2px; /* sharper than liquid-glass */
+}
+
+/* HUD-style progress bar — segmented blocks like Minecraft XP bar */
+.mc-hud-progress {
+  display: flex;
+  gap: 1px;
+  height: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+.mc-hud-progress > span {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.2s;
+}
+.mc-hud-progress > span.mc-hud-fill {
+  background: linear-gradient(180deg, #5ce6e6 0%, #BF5AF2 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Pixel-style rank number — crisp edges, monospace bold */
+.mc-pixel-rank {
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  image-rendering: pixelated;
+}
+
+/* Crosshair-style active indicator (replaces dot in some places) */
+.mc-crosshair {
+  position: relative;
+  width: 8px;
+  height: 8px;
+}
+.mc-crosshair::before,
+.mc-crosshair::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.mc-crosshair::before {
+  left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%);
+}
+.mc-crosshair::after {
+  top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%);
+}
+
+/* ═══ V6 · z-index constitution ═══
+   Single source of truth for stacking. Legacy hardcoded classes
+   (z-[70] panels / z-[80] widgets / z-[90] music sheet) already sit
+   at or above these bands — new components MUST use these tokens. */
+:root {
+  --z-nav: 40;      /* mobile capsule nav */
+  --z-dock: 45;     /* widget dock + module error card */
+  --z-widget: 80;   /* chat / AI floating panels */
+  --z-modal: 90;    /* music sheet & modal overlays */
+  --z-toast: 95;    /* toasts */
+  --z-health: 95;   /* data health heartbeat bar */
+}
+
+/* ═══ V6 · Widget Dock — equalizer badge ═══
+   Transform-only animation (scaleY) — never triggers layout. */
+.dock-eq-bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--system-green, #34d399);
+  transform-origin: bottom;
+  animation: dock-eq 0.9s ease-in-out infinite;
+}
+@keyframes dock-eq {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-eq-bar { animation: none; transform: scaleY(0.6); }
+}
+
+/* ═══ V6 · Pixel-grid ambience (D3) — pure CSS texture, 0 JS 0 image.
+   Sits under content via -z-10 inside the isolated page root. ═══ */
+.pixel-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -10;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse 120% 70% at 50% 0%, black 0%, transparent 78%);
+  mask-image: radial-gradient(ellipse 120% 70% at 50% 0%, black 0%, transparent 78%);
+}
+
+/* ════════════════════════════════════════════════════════════
+   LGX — League eXperience design system (UI refactor 2026-10)
+   Compact Player Row + Podium Strip + data capsules.
+   Dark / Premium / Competitive / HUD. Replaces the 4-band
+   pvp-card inside the ranking list; pvp-* stays for the
+   player-detail modal. Hairline borders, tabular numbers,
+   150-250ms transform+opacity motion only.
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --lgx-surface: rgba(14, 19, 17, 0.60);
+  --lgx-surface-hover: rgba(20, 27, 23, 0.78);
+  --lgx-line: rgba(255, 255, 255, 0.06);
+  --lgx-line-strong: rgba(255, 255, 255, 0.13);
+  --lgx-r-row: 10px;
+  --lgx-r-panel: 14px;
+  --lgx-fs-rank: calc(15px * var(--ui-scale));
+  --lgx-fs-name: calc(13px * var(--ui-scale));
+  --lgx-fs-meta: calc(10px * var(--ui-scale));
+  --lgx-t: 180ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+/* ── Compact Player Row ──────────────────────────────────────
+   Two-line dense row (~64px): rank · skin · name · tier ·
+   rating · change / title · region · W-L · K/D · likes. */
+.lgx-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: var(--lgx-r-row);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--lgx-t), border-color var(--lgx-t);
+}
+/* Main horizontal row — rank · skin · identity · tier · rating · chg · like */
+.lgx-row-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lgx-row:hover {
+  background: var(--lgx-surface-hover);
+  border-color: var(--lgx-line);
+}
+.lgx-row:focus-visible {
+  outline: 2px solid rgba(191, 90, 242, 0.65);
+  outline-offset: 2px;
+}
+/* ── Spotlight 光斑（FX-07 · React Bits Spotlight Card 等效）──
+   指针驱动 --sx/--sy（fx-spotlight-card.tsx hook 写入），
+   径向金光斑 z-index:-1：画在行底色之上、内容之下。
+   触屏（hover:none）不显示；纯 paint 层，零 rAF，FLIP 重排安全。 */
+.lgx-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 240ms ease;
+  background: radial-gradient(
+    220px circle at var(--sx, 50%) var(--sy, 50%),
+    rgba(212, 175, 55, 0.11),
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lgx-row:hover::after { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lgx-row::after { transition: none; }
+}
+.lgx-row-me {
+  background: rgba(191, 90, 242, 0.07);
+  border-color: rgba(191, 90, 242, 0.22);
+}
+/* W2-T4: 未参评区行 — 降级显示，不可点击进详情 */
+.lgx-row-ineligible {
+  opacity: 0.45;
+  cursor: default;
+}
+.lgx-row-ineligible:hover {
+  background: transparent;
+  border-color: transparent;
+}
+.lgx-row-ineligible:focus-visible {
+  outline: none;
+}
+/* ── 并列抽屉（TieDrawerRow）— 3+ 人同排名时折叠的单行抽屉 ── */
+.lgx-tie-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.lgx-tie-drawer-header {
+  /* 复用 .lgx-row 基础，叠加 jade 描边暗示「群组」可展开 */
+  background: rgba(191, 90, 242, 0.06);
+  border-color: rgba(191, 90, 242, 0.18);
+}
+.lgx-tie-drawer-header:hover {
+  background: rgba(191, 90, 242, 0.10);
+  border-color: rgba(191, 90, 242, 0.30);
+}
+.lgx-tie-drawer-header-open {
+  background: rgba(191, 90, 242, 0.10);
+  border-color: rgba(191, 90, 242, 0.34);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.lgx-tie-id {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.lgx-tie-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(191, 90, 242, 0.92);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.lgx-tie-preview {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+}
+.lgx-tie-preview-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  max-width: 110px;
+}
+.lgx-tie-preview-more {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.48);
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.lgx-skin-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+.lgx-tie-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  color: rgba(191, 90, 242, 0.75);
+}
+.lgx-tie-drawer-body {
+  padding-left: 6px;
+  border-left: 1.5px solid rgba(191, 90, 242, 0.22);
+  margin-left: 14px;
+  margin-top: 2px;
+}
+/* Rank numeral — strong, tabular */
+.lgx-rank {
+  width: 30px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: var(--lgx-fs-rank);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1;
+}
+.lgx-rank-1 { color: #fbbf24; }
+.lgx-rank-2 { color: #cbd5e1; }
+.lgx-rank-3 { color: #fb923c; }
+/* Skin avatar 34px — MC skin thumb */
+.lgx-skin {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lgx-line-strong);
+  background: rgba(255, 255, 255, 0.04);
+}
+.lgx-skin img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.lgx-skin-fallback {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+}
+/* Identity block */
+.lgx-id { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lgx-name {
+  font-size: var(--lgx-fs-name);
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lgx-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--lgx-fs-meta);
+  /* W5-T4: 0.45→0.56 提升对比度至 WCAG 4.5:1+（半透明前景在渐变背景上易吞字）*/
+  /* W5-v2.1: 0.56→0.62 叠加压中段——背景暗后 alpha 提升效果放大，余量 0.2→0.8+ */
+  color: rgba(255, 255, 255, 0.62);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.lgx-sub b { color: rgba(255, 255, 255, 0.78); font-weight: 600; }
+.lgx-sub .lgx-win { color: rgba(52, 211, 153, 0.85); }
+.lgx-sub .lgx-loss { color: rgba(251, 113, 133, 0.72); }
+/* Per-mode rank strip — full-width band below the main row */
+.lgx-mode-ranks {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 1px 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 12px), transparent);
+}
+.lgx-mode-ranks::-webkit-scrollbar { display: none; }
+.lgx-mode-rank-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  line-height: 1.3;
+  /* W5-v2.1-final: 根因修——chip 底 0.035→0.015（faint white 底是拉低对比度的病因，
+     减淡 57%）；alpha 0.55→0.72 保留（不回退——根因修 + 补偿并存，burgundy 余量
+     从 0.30 提到 ~1.0+）。0.04 alpha 不统一是名义洁癖，真实余量优先 */
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+.lgx-mode-rank-chip-active {
+  color: #fff;
+  background: rgba(191, 90, 242, 0.16);
+  border-color: rgba(191, 90, 242, 0.45);
+}
+.lgx-mode-rank-chip-dim {
+  color: rgba(255, 255, 255, 0.26);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+.lgx-mode-rank-icon { font-size: calc(10px * var(--ui-scale)); line-height: 1; }
+.lgx-mode-rank-num { font-size: calc(9px * var(--ui-scale)); }
+/* Tier chip */
+.lgx-tier {
+  flex-shrink: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 6px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.lgx-tier-empty {
+  color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 500;
+}
+/* W2-T4: 待认证徽章 — 替代段位 chip 显示在未参评区行 */
+.lgx-tier-pending {
+  color: rgba(251, 191, 36, 0.85);
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+/* ── CG-1 TierBadge（Trophy Achievement Badge 结构借鉴，MIT）──
+   色板出自 tierPillStyle（w5 对比度审计成果）；菱形标提供带族纹理，
+   稀有段（HT1/HT2/LZ/LL）由组件内联加同带色微光。 */
+.lgx-tb { display: inline-flex; align-items: center; gap: 4px; }
+.lgx-tb-gem {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+/* P2 尺寸变体：尺寸样式由组件类全权负责（非分层样式优先级高于
+   Tailwind 工具层，外部 text-/px- 覆盖会静默失效——见 tier-badge.tsx 注释）。
+   sm = 详情弹窗 9 模式矩阵格 / lg = 详情弹窗身份块徽章。 */
+.lgx-tb-sm { gap: calc(3px * var(--ui-scale)); font-size: calc(9px * var(--ui-scale)); padding: calc(2px * var(--ui-scale)) calc(5px * var(--ui-scale)); border-radius: calc(4px * var(--ui-scale)); }
+.lgx-tb-sm .lgx-tb-gem { width: calc(4px * var(--ui-scale)); height: calc(4px * var(--ui-scale)); }
+.lgx-tb-lg { gap: calc(4px * var(--ui-scale)); font-size: calc(11px * var(--ui-scale)); padding: calc(4px * var(--ui-scale)) calc(8px * var(--ui-scale)); border-radius: calc(8px * var(--ui-scale)); }
+
+/* ── 玩家个性标签样式（管理员后台「个性标签」编辑器产出）──
+   2026-11-03 按用户规格重调。核心原则：
+   1) 金属/全息质感 = 分层叠加 + 高光→本体→暗部三层过渡（纯白高光刺眼、
+      纯黑暗部显脏，用带冷调的灰模拟反射）
+   2) 流光无缝循环 = 渐变首尾同色 + background-size 200% + position 0→200%
+   3) 文字光效避坑：金属/彩虹渐变上文字易糊——基类 font-weight 700 兜底
+      （lgx-tier 已是 700），text-shadow/drop-shadow 克制
+   4) prefers-reduced-motion：标签类全部停帧（站点已有分层降级体系，
+      不用全局 * { animation: none !important } 以免破坏他处降级）
+   bgEffect: rainbow / gold / goldMix(金银融合) / silverGold(银底金边)
+   textEffect: rainbow(扫光) / gold
+   注意：组件在有效果时不再设 inline background/color——inline 优先级高于
+   类，会让渐变失效。详见 tier-badge.tsx。 */
+
+/* 🌈 彩虹背景光效 —— 底层：极简流光彩虹（方案二，全兼容，首尾同色无缝循环） */
+.tag-bg-rainbow {
+  color: #0b0b14;
+  background: linear-gradient(90deg, #ff8a8a, #ffd93d, #7ef2b0, #6bcbff, #b98bff, #ff8a8a);
+  background-size: 200% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 24px -12px rgba(255, 140, 140, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  animation: tag-flow 5s linear infinite;
+}
+/* 🌈 增强：支持 oklch 的浏览器叠加全息高光层（方案一 分层全息，过渡更顺滑）。
+   conic 色轮层在小尺寸徽章上会呈色轮拼贴感，故改为 oklch 高光带扫过流光底，
+   保留「分层叠加 + oklch 顺滑过渡」的规格意图。 */
+@supports (color: oklch(0.7 0.15 200)) {
+  .tag-bg-rainbow {
+    background:
+      linear-gradient(115deg, transparent 20%, oklch(0.7 0.15 200 / 0.5) 45%, oklch(0.75 0.18 320 / 0.55) 55%, transparent 80%),
+      linear-gradient(90deg, #ff8a8a, #ffd93d, #7ef2b0, #6bcbff, #b98bff, #ff8a8a);
+    background-size: 100% 100%, 220% 100%;
+    background-position: 0% 50%, 0% 50%;
+    animation: tag-flow-holo 6s linear infinite;
+  }
+}
+
+/* ✨ 金色背景光效 —— 金属三层：暗金 → 金 → 高光 → 金 → 暗金（高光带冷调，不刺眼） */
+.tag-bg-gold {
+  color: #3a2c07;
+  background: linear-gradient(135deg, #8a6d1f 0%, #d4af37 22%, #fff3a8 50%, #ffd700 68%, #d4af37 85%, #8a6d1f 100%);
+  background-size: 220% 100%;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 8px 22px -14px rgba(212, 175, 55, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  animation: tag-flow 6s linear infinite;
+}
+
+/* ✨ 金银混色流光（goldMix）—— 规格·金银融合流光（方案一原文落地）：
+   金(#d4af37) → 亮金(#eede5e) → 银白高光(#f3f2e7) → 银灰(#b1b1b1) → 金，
+   1000% 大画布 + ease 双向往复，光泽在金银间流动 */
+.tag-bg-goldMix {
+  color: #1a1a1a;
+  background: linear-gradient(270deg, #d4af37, #eede5e, #f3f2e7, #b1b1b1, #d4af37);
+  background-size: 1000% 1000%;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 8px 24px -14px rgba(212, 175, 55, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: tag-gold-flow 8s ease infinite;
+}
+
+/* ✨ 银底金边（silverGold）—— 规格·分体式双色金属（方案二）。
+   实现改为「双背景 gradient border 技巧」（padding-box 银基底 + border-box 金渐变）：
+   规格原用的 ::before + z-index:-1 在榜单行（framer-motion transform 创建
+   stacking context）里会被行背景吞掉，双背景法零层级风险、视觉等价 */
+.tag-bg-silverGold {
+  color: #2a2a2a;
+  background:
+    linear-gradient(135deg, #7c7c7c 0%, #c0c0c0 22%, #fafafa 50%, #c0c0c0 78%, #7c7c7c 100%) padding-box,
+    linear-gradient(90deg, #d4af37, #ffd700, #f3f2e7, #d4af37) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 8px 22px -14px rgba(192, 192, 192, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 文字光效（避坑：background-clip:text + color transparent；font-weight 700 由
+   .lgx-tier 基类兜底；drop-shadow 克制到近乎不可见，防止渐变糊掉）。
+   2026-11-03 结构调整：类挂在内层 span（tier-badge.tsx）——渐变画在元素自身
+   background 上经 clip:text 裁切显示，若挂外层会被 inline 段位底色覆盖导致
+   文字隐形。inline-block 保证 200% 画布定位在文本块上稳定。 */
+.tag-text-rainbow {
+  display: inline-block;
+  font-weight: 700;
+  background: linear-gradient(90deg, #ff8a8a, #ffd93d, #7ef2b0, #6bcbff, #b98bff, #ff8a8a);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: tag-text-scan 3s linear infinite;
+}
+.tag-text-gold {
+  display: inline-block;
+  font-weight: 700;
+  background: linear-gradient(180deg, #fff3a8 0%, #ffd700 38%, #d4af37 62%, #8a6d1f 88%, #ffd700 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(212, 175, 55, 0.45));
+}
+
+/* 流光循环（首尾同色 → position 0→200% 无缝） */
+@keyframes tag-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: 200% 50%; }
+}
+/* 全息双层：高光层静止，流光层滚动 */
+@keyframes tag-flow-holo {
+  from { background-position: 0% 50%, 0% 50%; }
+  to { background-position: 0% 50%, 220% 50%; }
+}
+/* 金银融合：规格原文 keyframes（ease 往复，光泽游走） */
+@keyframes tag-gold-flow {
+  0% { background-position: 0% 11%; }
+  50% { background-position: 100% 90%; }
+  100% { background-position: 0% 11%; }
+}
+/* 彩虹文字扫光 */
+@keyframes tag-text-scan { to { background-position: 200% center; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-bg-rainbow, .tag-bg-gold, .tag-bg-goldMix, .tag-bg-silverGold, .tag-text-rainbow { animation: none; }
+  .tag-bg-rainbow { background-position: 0% 50%; }
+}
+/* ── CG-1 定位到我脉冲（Trophy current-user-focus 借鉴）──
+   金色单圈扩散；prefers-reduced-motion 降级为静态高亮。 */
+.lgx-row-locate {
+  animation: lgx-locate-pulse 1.6s cubic-bezier(0.2, 0.9, 0.2, 1) 1;
+}
+@keyframes lgx-locate-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.45); background-color: rgba(212, 175, 55, 0.12); }
+  70% { box-shadow: 0 0 0 14px rgba(212, 175, 55, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lgx-row-locate { animation: none; }
+}
+/* Rating core */
+.lgx-rating {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 58px;
+}
+.lgx-rating-num {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1;
+}
+.lgx-rating-label {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.34);
+  text-transform: uppercase;
+}
+/* Rank change micro */
+.lgx-chg {
+  flex-shrink: 0;
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lgx-chg-up { color: rgba(52, 211, 153, 0.95); }
+.lgx-chg-down { color: rgba(251, 113, 133, 0.85); }
+.lgx-chg-flat { color: rgba(255, 255, 255, 0.28); }
+/* Like heart — inline micro button */
+.lgx-like {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--lgx-t), background var(--lgx-t), border-color var(--lgx-t);
+}
+.lgx-like:hover { color: #fb7185; background: rgba(251, 113, 133, 0.10); border-color: rgba(251, 113, 133, 0.22); }
+/* Like pulse on live/socket like */
+@keyframes lgx-like-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.lgx-like-pop { animation: lgx-like-pop 320ms cubic-bezier(0.2, 0.9, 0.2, 1); }
+
+/* ── Podium Strip — top-3 horizontal band ─────────────────── */
+.lgx-podium {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: 6px;
+}
+.lgx-podium-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 9px;
+  border-radius: var(--lgx-r-panel);
+  background: var(--lgx-surface);
+  border: 1px solid var(--lgx-line);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--lgx-t), background var(--lgx-t);
+}
+.lgx-podium-cell:hover { border-color: var(--lgx-line-strong); background: var(--lgx-surface-hover); }
+.lgx-podium-1 { border-color: rgba(212, 175, 55, 0.38); background: linear-gradient(180deg, rgba(212, 175, 55, 0.10), rgba(212, 175, 55, 0.02) 60%, transparent); }
+.lgx-podium-2 { border-color: rgba(203, 213, 225, 0.26); }
+.lgx-podium-3 { border-color: rgba(251, 146, 60, 0.26); }
+.lgx-podium-rank {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.lgx-podium-1 .lgx-podium-rank { color: #fbbf24; }
+.lgx-podium-2 .lgx-podium-rank { color: #cbd5e1; }
+.lgx-podium-3 .lgx-podium-rank { color: #fb923c; }
+.lgx-podium-skin {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--lgx-line-strong);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+}
+.lgx-podium-skin img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.lgx-podium-name {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  /* W5-T2: 渐变背景文字 text-shadow 兜底 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lgx-podium-rating {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+}
+.lgx-podium-sub {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.42);
+}
+/* W2-T1: 前三名信息一致性 — rank + 箭头横排、rating label、模式段位带 */
+.lgx-podium-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+.lgx-podium-head .lgx-chg { min-width: 22px; justify-content: center; }
+.lgx-podium-rating-label {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.38);
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+/* 2026-10: 领奖台爱心点赞按钮 — 胶囊形，玫瑰红 hover */
+.lgx-podium-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 9px;
+  margin-top: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  background: rgba(251, 113, 133, 0.08);
+  color: #fb7185;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--lgx-t), border-color var(--lgx-t), transform var(--lgx-t);
+}
+.lgx-podium-like:hover {
+  background: rgba(251, 113, 133, 0.16);
+  border-color: rgba(251, 113, 133, 0.38);
+}
+/* 前三模式段位带 — 继承 .lgx-mode-ranks，缩小适配 podium cell 宽度 */
+.lgx-podium-ranks {
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--lgx-line);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.lgx-podium-ranks .lgx-mode-rank-chip {
+  padding: 0 3px;
+  font-size: 8px;
+}
+.lgx-podium-ranks .lgx-mode-rank-icon { font-size: 8px; }
+.lgx-podium-ranks .lgx-mode-rank-num { font-size: 8px; }
+
+/* ── Panel shell — one container, sections divided ────────── */
+.lgx-panel {
+  border-radius: var(--lgx-r-panel);
+  background: var(--lgx-surface);
+  border: 1px solid var(--lgx-line);
+  padding: 12px;
+}
+.lgx-panel-title {
+  font-size: calc(10px * var(--ui-scale));
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--ui-scale));
+  margin-bottom: calc(6px * var(--ui-scale));
+}
+.lgx-divider { height: 1px; background: var(--lgx-line); margin: 8px 0; border: 0; }
+
+/* ── 紧凑面板 + Overview 紧凑数据模块（2026-10 重构）───────── */
+.lgx-panel-compact { padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale)); }
+.lgx-overview-compact { display: flex; flex-direction: column; gap: 4px; }
+.lgx-overview-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  line-height: 1.4;
+}
+.lgx-ov-num {
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+}
+.lgx-ov-lbl {
+  font-size: calc(9px * var(--ui-scale));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+.lgx-ov-sep {
+  color: rgba(255, 255, 255, 0.18);
+  margin: 0 1px;
+}
+
+/* ── Compact Mode Tier Matrix（2026-10 v2：信息不删，视觉降噪）──
+   内联文本流：icon + 模式名 + tier。无边框胶囊 → 结构化轻信息，
+   视觉权重显著低于名字/Rating。未定级显示 —（诚实）。 */
+.lgx-tmx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  padding: 5px 2px 2px 40px; /* 40px = rank(30px)+gap(10px)，对齐身份区 */
+  border-top: 1px dashed rgba(255, 255, 255, 0.07);
+  margin-top: 5px;
+}
+.lgx-tmx-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.lgx-tmx-icon {
+  font-size: 9px;
+  opacity: 0.6;
+}
+.lgx-tmx-name {
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.01em;
+}
+.lgx-tmx-tier {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.75);
+}
+.lgx-tmx-item.lgx-tmx-empty { opacity: 0.4; }
+.lgx-tmx-empty .lgx-tmx-tier {
+  color: rgba(255, 255, 255, 0.32);
+  font-weight: 600;
+}
+/* Podium 变体：居中 + 无缩进 + 只显示 icon+tier（更紧凑）*/
+.lgx-tmx-podium {
+  justify-content: center;
+  padding: 4px 0 0;
+  margin-top: 4px;
+  gap: 2px 8px;
+}
+.lgx-tmx-podium .lgx-tmx-item { font-size: 9px; }
+
+/* ── Stat capsule grid (L2 micro stats) ───────────────────── */
+.lgx-caps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 5px;
+}
+.lgx-cap {
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+.lgx-cap-num {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.15;
+}
+.lgx-cap-label {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+  margin-top: 1px;
+}
+
+/* ── Mode switcher (desktop pill row / mobile dropdown) ───── */
+.lgx-modebar { display: flex; align-items: center; gap: 3px; overflow-x: auto; scrollbar-width: none; }
+.lgx-modebar::-webkit-scrollbar { display: none; }
+.lgx-mode-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+  white-space: nowrap;
+  transition: color var(--lgx-t), background var(--lgx-t), border-color var(--lgx-t);
+  min-height: 30px;
+}
+.lgx-mode-pill:hover { color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.05); }
+.lgx-mode-pill[data-active='true'] {
+  color: #fff;
+  background: rgba(191, 90, 242, 0.14);
+  border-color: rgba(191, 90, 242, 0.32);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lgx-row, .lgx-podium-cell, .lgx-mode-pill, .lgx-like { transition: none; }
+  .lgx-like-pop { animation: none; }
+}
+
+/* ── LGX mobile ergonomics — touch targets & density guard ── */
+@media (max-width: 1023px) {
+  .lgx-like {
+    min-width: 44px;
+    min-height: 36px;
+    justify-content: center;
+    padding: 6px 10px;
+  }
+  .lgx-row { padding: 10px 8px; }
+  .lgx-mode-pill { min-height: 40px; }
+  .lgx-chg { min-width: 30px; }
+  /* Rating column keeps breathing room on narrow screens */
+  .lgx-rating { min-width: 52px; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   SiteBackground — D 卷可替换背景架构（槽位层规范）
+   三层分离: 槽位(此处) / 插件(backgrounds/plugins/*) / 控制器(bg-controller)
+   槽位固定、插件可插拔、切换有过渡、状态能恢复。
+   插入点: page.tsx 主容器(isolate 堆叠上下文)内第 2 个子元素。
+   z-index:-8 → 绘制顺序: 主题渐变(容器背景) → pixel-grid(-10)
+   → 本层(-8) → 内容。pointer-events:none 不挡任何交互。
+   新增背景只加文件(backgrounds/plugins/ + bg-registry)，不改此处。
+   ════════════════════════════════════════════════════════════ */
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -8;               /* isolate 容器内负值，盖住 pixel-grid(-10) 且在内容(0+)之下 */
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;   /* 槽位本身透明，颜色由插件/fallback 管 */
+}
+.site-bg__stage,
+.site-bg__fallback,
+.site-bg__veil {
+  position: absolute;
+  inset: 0;
+}
+
+/* 3.1 降级层：无 JS / canvas 失败 / 首屏 mount 前可见；ready 后隐藏 */
+.site-bg__fallback {
+  background:
+    radial-gradient(ellipse 60% 45% at 20% 12%, rgba(212, 175, 55, 0.05), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 80% 85%, rgba(46, 204, 113, 0.045), transparent 55%),
+    #1a1a2e;
+}
+.site-bg[data-bg-ready="true"] .site-bg__fallback { display: none; }
+
+/* 3.2 插件 stage：插件 canvas/div 都挂这里 */
+.site-bg__stage { overflow: hidden; }
+
+/* 3.3 过渡层：切换时盖住旧→新，淡入淡出（reduced-motion 下 0ms）
+   待办清理批验收补全（批复 2026-11-08「待办执行」+ 验收指令 2026-11-08）：
+   「veil 320ms → 200ms」授权项的 CSS 半边——与 bg-controller.ts veilDuration
+   同步 200ms，保证「等 veil 完全不透明」语义成立（此前 JS=200/CSS=320 失配，
+   插件切换发生在遮罩 ~62% 不透明处） */
+.site-bg__veil {
+  opacity: 0;
+  transition: opacity 200ms ease;
+  background: #1a1a2e;       /* 与 fallback 同色，切换不突兀 */
+  pointer-events: none;
+}
+.site-bg__veil.is-active { opacity: 1; }
+
+/* 3.4 性能提示层（可选，控制器按需 show） */
+.site-bg__notice {
+  position: absolute;
+  bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: rgba(235, 235, 245, 0.4);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+
+/* reduced-motion: veil 直接切换 + 全局 transition 压到 0.01ms（L207+ 已覆盖） */
+@media (prefers-reduced-motion: reduce) {
+  .site-bg__veil { transition-duration: 0ms; }
+}
+
+/* 内容层保护说明：主容器 isolate + 内容默认 z auto(0) 已高于背景 -8，
+   无需额外声明 header/main/footer z-index（避免破坏现有 sticky/stacking）。 */
+
+/* ════════════════════════════════════════════════════════════════════
+   高级动效·阶段 3：Custom Cursor — dot + ring 双元素
+   - 挂 body（isolate 兄弟），z-index max，pointer-events:none 不挡交互
+   - mix-blend-mode:difference → 任何背景自动反色可见（dark/light 通用）
+   - cursor-ring--hover：a/button/[role=button] → ring 放大 + 变玉绿
+   - cursor-ring--text：input/textarea/contenteditable → dot 隐藏 + ring 变 I-beam
+   - cursor-ring--active：pointerdown 点击脉冲
+   - cursor 静止时 rAF 自取消（不常驻），仅在 mousemove 唤醒
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 隐藏原生光标 — 仅 JS 成功启动后由 CursorManager 加此类 */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor: none !important;
+}
+
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: #ffffff;
+  border-radius: 50%;
+  mix-blend-mode: difference;
+  pointer-events: none;
+  z-index: 2147483647;
+  will-change: transform;
+  transition: opacity 0.2s ease;
+}
+
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  border: 1.5px solid rgba(212, 175, 55, 0.75); /* 金 #D4AF37 */
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2147483647;
+  will-change: transform;
+  transition:
+    width 0.22s ease,
+    height 0.22s ease,
+    margin 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    border-radius 0.22s ease,
+    opacity 0.2s ease;
+}
+
+/* hover：ring 放大 + 变玉绿 #2ECC71 */
+.cursor-ring--hover {
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-color: rgba(46, 204, 113, 0.9);
+  background-color: rgba(46, 204, 113, 0.12);
+}
+
+/* text：ring 变 I-beam 竖条（dot 同步隐藏） */
+.cursor-ring--text {
+  width: 3px;
+  height: 22px;
+  margin: -11px 0 0 -1.5px;
+  border: none;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.95);
+  mix-blend-mode: difference;
+}
+
+/* 点击脉冲：ring 微缩 */
+.cursor-ring--active {
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+}
+.cursor-ring--active.cursor-ring--hover {
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+}
+
+/* 隐藏（首屏 + 鼠标离开窗口） */
+.cursor-dot--hidden,
+.cursor-ring--hidden {
+  opacity: 0;
+}
+
+/* reduced-motion：ring 过渡压到 0（仅保留即时定位，不剥夺光标本身） */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-ring {
+    transition-duration: 0s;
+  }
+}
+
+/* ═══ 沉浸式动效工程包移植 · Task 36-C：微交互 .micro + 揭示辅助 + 降级 ═══ */
+
+/* 补充 .micro 所需 motion token（项目 globals.css 未定义 --dur-micro / --ease-out；
+   不补则 var() 失效 → .micro 的 transition 整条声明无效 → 无过渡。
+   仅追加新 token，不覆盖项目已有任何变量。） */
+:root {
+  --dur-micro: 120ms;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---------- 微动画：只动合成属性 ---------- */
+.micro {
+  transition: transform var(--dur-micro) var(--ease-out),
+              opacity   var(--dur-micro) var(--ease-out),
+              filter    var(--dur-micro) var(--ease-out);
+  will-change: transform;
+  transform: translateZ(0);
+}
+.micro:hover  { transform: translateY(-2px); }
+.micro:active { transform: scale(.97); }
+.micro:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- 滚动中冻结微动画，避免抢占主时间轴 ---------- */
+[data-scrolling="true"] .micro {
+  transition: none !important;
+  transform: none !important;
+}
+
+/* ---------- 揭示辅助 ---------- */
+.mask-line   { overflow: hidden; display: block; }
+.clip-left   { clip-path: inset(0 100% 0 0); }
+
+/* ---------- 降级 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .clip-left { clip-path: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  /* 工程包原样：.grain/.vignette 在本项目未定义（项目用 .site-bg__veil/.site-bg__fallback
+     等独立质感层），此规则当前为 no-op，保留结构以便后续接入；不新增 .grain/.vignette
+     类定义以避免与项目现有质感层双层叠加。 */
+  .grain, .vignette { display: none !important; }
+}
+
+/* recompile-trigger */
+
+/* P2 recompile marker */
+
+/* ── Empty Slot Ghost Row（AU 审计修复 · showEmptySlots）────
+   榜单补席幽灵行：虚线框 + 低对比文案，视觉上明显「非玩家」。
+   无 hover/光标/焦点 —— 它不是可交互对象。 */
+.lgx-row-empty {
+  cursor: default;
+  border: 1px dashed var(--lgx-line, rgba(255, 255, 255, 0.08));
+  opacity: 0.55;
+  min-height: 44px;
+  justify-content: center;
+}
+.lgx-row-empty:hover {
+  background: transparent;
+  border-color: var(--lgx-line, rgba(255, 255, 255, 0.08));
+}
+.lgx-row-empty .lgx-rank {
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* AU 审计修复（2026-11）：「暂停所有动效」补齐纯 CSS 动画覆盖。
+   site-effects.tsx 在 pausedMotion 时给 <html> 挂 .motion-paused，
+   此处冻结所有 keyframes（与 prefers-reduced-motion 的 .01ms 策略不同：
+   这里用 play-state:paused 保帧定格，恢复时从当前帧续播，无跳变）。
+   不冻结 transition —— 过渡是用户触发的一次性反馈（hover/press），
+   冻结会把元素卡在中间态破坏交互语义。 */
+html.motion-paused *,
+html.motion-paused *::before,
+html.motion-paused *::after {
+  animation-play-state: paused !important;
+}
+
+/* ============================================================
+   视口自适应 UI 缩放系统（2026-11）
+   依据主流屏幕 CSS 视口分档（StatCounter 2025：1366×768、1536×864、
+   1920×1080 合计近半；平板 iPad Pro 横屏 = 1366×1024）：
+   64em=1024 平板竖屏 · 85.375em=1366 iPad Pro 横屏 · 96em=1536（1080p@125%）
+   120em=1920 FHD · 160em=2560 2K · 240em=3840（4K 或 1080p@50% 缩放）
+   —— --ui-scale 只放大密集小件（模式标签/图标/行字号/导航胶囊），
+   布局宽度公式不受影响；根字号轻度流态，Tailwind rem 全局联动。
+   scale=1 时所有 calc 值与原 px 完全一致，移动端零回归。
+   ============================================================ */
+html {
+  font-size: clamp(16px, 12.9px + 0.24vw, 22px);
+}
+:root {
+  --ui-scale: 1;
+}
+@media (min-width: 64em) {
+  :root { --ui-scale: 1.12; }   /* ≥1024 平板竖屏/小笔电 */
+}
+@media (min-width: 85.375em) {
+  :root { --ui-scale: 1.28; }   /* ≥1366 iPad Pro 横屏 */
+}
+@media (min-width: 96em) {
+  :root { --ui-scale: 1.38; }   /* ≥1536 1080p@125% 缩放档 */
+}
+@media (min-width: 120em) {
+  :root { --ui-scale: 1.5; }    /* ≥1920 FHD 台式 */
+}
+@media (min-width: 160em) {
+  :root { --ui-scale: 1.7; }    /* ≥2560 2K */
+}
+@media (min-width: 240em) {
+  :root { --ui-scale: 1.95; }   /* ≥3840 4K / 1080p@50% 浏览器缩放 */
+}
+/* 矮屏守卫：1366×768 级笔电视口高度 ≤832px，回落一档防纵向挤压 */
+@media (min-width: 85.375em) and (max-height: 52em) {
+  :root { --ui-scale: 1.12; }
+}
+
+/* ============================================================
+   XT PVP Tier 规格榜样式（xt-leaderboard.tsx · 2026-10）
+   直接 copy 自 upload/xt_pvp_tier_cleaned.html 模板 CSS，
+   类名统一加 xtlb- 前缀避免与 LGX 体系冲突；色值为模板原值。
+   注：html.motion-paused 全局冻结规则自动覆盖本节动画。
+   ============================================================ */
+.xtlb-root {
+  color: #e2e2e2;
+}
+
+/* —— 模式 Tab —— */
+.xtlb-tabs {
+  display: flex;
+  gap: calc(4px * var(--ui-scale));
+  margin-bottom: calc(10px * var(--ui-scale));
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: calc(6px * var(--ui-scale));
+  -webkit-overflow-scrolling: touch;
+}
+.xtlb-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(6px * var(--ui-scale)) calc(9px * var(--ui-scale));
+  background: #202333;
+  border: none;
+  border-radius: calc(7px * var(--ui-scale));
+  cursor: pointer;
+  font-size: calc(11px * var(--ui-scale));
+  color: #e2e2e2;
+  flex-shrink: 0;
+  line-height: 1.2;
+  /* 待办清理批（批复 2026-11-08「待办执行」）：R2 顺延项闭环——模式 Tab 实测 43px
+     不足 44px 触达标准，补 min-height（ui-scale 感知与体系一致） */
+  min-height: calc(44px * var(--ui-scale));
+  /* P3-20（审计 2026-11-13）：触达宽度同步达标——实测宽 40px < 44px，密集排列
+     有误触风险；补 min-width 与 min-height 同规格（ui-scale 感知） */
+  min-width: calc(44px * var(--ui-scale));
+  transition: background-color 0.15s ease;
+}
+.xtlb-tab:hover { background: #262a3d; }
+/* 待办清理批：I3 诊断关联观察项裁定通过——酦蓝激活底 → 主题 violet 低透明叠底
+   （--primary #BF5AF2 × 0.30，与同组件 focus-visible outline var(--primary) 同语言） */
+.xtlb-tab.active { background: rgba(191, 90, 242, 0.30); }
+.xtlb-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.xtlb-tab-trophy {
+  font-size: calc(14px * var(--ui-scale));
+  line-height: calc(16px * var(--ui-scale));
+  margin-bottom: calc(2px * var(--ui-scale));
+}
+.xtlb-tab-icon {
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
+  margin-bottom: calc(2px * var(--ui-scale));
+  mix-blend-mode: screen;
+  object-fit: contain;
+}
+/* 兼容 McIcon 兜底（img.w-4 h-4）—— 与主图标同档缩放 */
+.xtlb-tab img.w-4 {
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
+}
+
+/* —— 搜索框 —— */
+.xtlb-search {
+  width: 100%;
+  background: #202333;
+  border: none;
+  border-radius: calc(9px * var(--ui-scale));
+  padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  color: #fff;
+  font-size: calc(12px * var(--ui-scale));
+  margin-bottom: calc(12px * var(--ui-scale));
+}
+.xtlb-search::placeholder { color: #777996; }
+.xtlb-search:focus-visible { outline: 1px solid var(--primary); }
+
+/* —— 表格 —— */
+.xtlb-tablewrap { overflow-x: auto; width: 100%; }
+.xtlb-table { border-collapse: collapse; width: 100%; }
+.xtlb-table thead td {
+  color: #aaa;
+  padding: calc(6px * var(--ui-scale)) calc(3px * var(--ui-scale));
+  font-size: calc(11px * var(--ui-scale));
+  text-align: center;
+  white-space: nowrap;
+}
+.xtlb-th-left { text-align: left !important; }
+.xtlb-table tbody tr { border-bottom: 1px solid #24283a; }
+.xtlb-table tbody td {
+  padding: calc(8px * var(--ui-scale)) calc(6px * var(--ui-scale));
+  vertical-align: middle;
+  font-size: calc(11px * var(--ui-scale));
+  text-align: center;
+}
+.xtlb-row { cursor: pointer; }
+.xtlb-row:hover { background: rgba(255, 255, 255, 0.02); }
+
+/* —— 排名格（Top3 荣誉底色）—— */
+.xtlb-rank-cell { width: calc(34px * var(--ui-scale)); text-align: center; font-weight: bold; }
+.xtlb-rank1 { background-color: #b8940044; border-radius: 5px; }
+.xtlb-rank2 { background-color: #88888844; border-radius: 5px; }
+.xtlb-rank3 { background-color: #b3600044; border-radius: 5px; }
+
+/* —— 玩家格 + 头衔阶梯 —— */
+.xtlb-player-cell { text-align: left; padding-left: 6px; min-width: 96px; }
+.xtlb-player-name {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.xtlb-player-name strong { font-size: 13px; }
+.xtlb-player-name:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 3px; }
+.xtlb-player-title { font-size: 10px; margin-top: 2px; }
+.xtlb-point-cell { width: 60px; }
+.xtlb-point-cell b { font-weight: 800; }
+.xtlb-noxt { color: #44475e; }
+
+.xtlb-title-rookie { color: #666666; }
+.xtlb-title-combatnovice { color: #229933; }
+.xtlb-title-combatcadet { color: #2099aa; }
+.xtlb-title-combatspecialist { color: #9944cc; }
+.xtlb-title-combatace {
+  color: #ff3333 !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 51, 51, 0.8);
+  animation: xtlbFlicker 1.2s ease-in-out infinite alternate;
+}
+.xtlb-title-combatelite {
+  color: #db2777 !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(219, 39, 119, 0.8);
+  animation: xtlbFlicker 1.4s ease-in-out infinite alternate;
+}
+.xtlb-title-combatmaster {
+  color: #ffdd22 !important;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 221, 34, 0.9);
+  animation: xtlbFlicker 1.8s ease-in-out infinite alternate;
+}
+.xtlb-title-combatgrandmaster {
+  font-weight: bold;
+  background: linear-gradient(90deg, #ffc107, #fffde7, #ffb300, #fffde7, #ffc107);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(255, 193, 7, 0.8));
+  animation: xtlbGradientMove 3s linear infinite, xtlbFlicker 2s ease-in-out infinite alternate;
+}
+@keyframes xtlbFlicker {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+@keyframes xtlbGradientMove {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xtlb-title-combatace, .xtlb-title-combatelite,
+  .xtlb-title-combatmaster, .xtlb-title-combatgrandmaster { animation: none; }
+}
+
+/* —— 模式徽章单元（图标上 / 段位下）—— */
+.xtlb-modes-cell { white-space: nowrap; overflow: hidden; }
+.xtlb-mode-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin: 0 2px 0 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.xtlb-mode-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  mix-blend-mode: screen;
+}
+.xtlb-mode-icon-chip { width: 18px; height: 18px; }
+/* ModeIcon 尺寸档（个人面板图标对齐榜单 XT-SPEC 追补）：
+   sm=12px（详情弹窗模式矩阵 / 侧栏 Mode Kings）、xs=10px（个人胶囊段位 rail）。
+   尺寸收口在 CSS 档位——.xtlb-mode-icon 非分层样式压过 Tailwind 工具层，
+   组件侧严禁用 w-* 覆盖（P2 踩坑同源）。 */
+.xtlb-mode-icon-sm { width: 12px; height: 12px; }
+.xtlb-mode-icon-xs { width: 10px; height: 10px; }
+.xtlb-badge {
+  display: inline-block;
+  padding: 1px 3px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: bold;
+  margin: 0;
+  text-align: center;
+  min-width: 20px;
+  line-height: 1.5;
+}
+.xtlb-t1 { background-color: #b8940077; color: #ffdd44; border: 1px solid #ffdd4480; }
+.xtlb-t2 { background-color: #99333377; color: #ff7777; border: 1px solid #ff777777; }
+.xtlb-t3 { background-color: #b3600077; color: #ffaa44; border: 1px solid #ffaa4477; }
+.xtlb-t4 { background-color: #70402077; color: #cc8855; border: 1px solid #cc885577; }
+.xtlb-t5 { background-color: #55555577; color: #bbbbbb; border: 1px solid #bbbbbb77; }
+.xtlb-rf { background-color: #44444455; color: #cccccc; border: 1px dashed #88888888; }
+
+/* —— 单模式分组矩阵 —— */
+.xtlb-tier-head {
+  background: #2a2e42;
+  padding: 6px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  color: #c1c6e8;
+  text-align: center;
+}
+.xtlb-matrix-cell { vertical-align: top; padding: 4px !important; }
+.xtlb-chip {
+  cursor: pointer;
+  background: #141722;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+  color: #e2e2e2;
+  font: inherit;
+  transition: background-color 0.15s ease;
+}
+.xtlb-chip:hover { background: #1b1f2e; }
+.xtlb-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.xtlb-chip-name { font-size: 12px; color: #e2e2e2; overflow: hidden; text-overflow: ellipsis; }
+.xtlb-chip .xtlb-badge { font-size: 9px; min-width: 22px; margin-left: auto; flex-shrink: 0; }
+
+/* —— 空态 ——（注：XT 公告条 .xtlb-notice-* 已随 notice-bar 移除——用户指令
+   2026-10：黑框公告不如顶部既有公告小弹窗，组件与样式一并删除） */
+.xtlb-empty {
+  color: #777996;
+  font-size: 12px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* —— 筛选（用户指令 2026-10：筛选加回来，防抄袭差异化）——
+   视图层过滤，不改 XT 表格规格：总榜按中文称号过滤行，单模式榜按 Tier 组过滤列 */
+.xtlb-search-row {
+  position: relative;
+  display: flex;
+  gap: calc(8px * var(--ui-scale));
+  align-items: stretch;
+}
+.xtlb-search-row .xtlb-search {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.xtlb-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(4px * var(--ui-scale));
+  flex-shrink: 0;
+  padding: 0 calc(12px * var(--ui-scale));
+  border-radius: calc(6px * var(--ui-scale));
+  border: 1px solid #2a2d45;
+  background: #12141f;
+  color: #a9aec9;
+  font-size: calc(12px * var(--ui-scale));
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.xtlb-filter-btn:hover { background: #181b2b; color: #e2e2e2; }
+.xtlb-filter-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.xtlb-filter-btn.active { border-color: #ffc107; color: #ffc107; }
+.xtlb-filter-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: rgba(13, 15, 26, 0.97);
+  border: 1px solid #2a2d45;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.xtlb-filter-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #777996;
+  font-weight: bold;
+}
+.xtlb-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.xtlb-filter-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #2a2d45;
+  background: #12141f;
+  color: #a9aec9;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.xtlb-filter-chip:hover { background: #181b2b; color: #e2e2e2; }
+.xtlb-filter-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.xtlb-filter-chip.active {
+  border-color: #ffc107;
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.08);
+}
+.xtlb-filter-clear {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.xtlb-filter-clear:hover { text-decoration: underline; }
+.xtlb-filter-clear:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* ============================================================
+   Arena Console 设计语言 · V2.0 UI 升级（Phase 5，2026-11-05）
+   管理员批准实施 · 白名单文件 · 全部为【新增块】，不修改上方任何既有规则
+   设计报告：docs/GOATB_UI_UPGRADE_REPORT.md §5
+   ============================================================ */
+
+/* ---- 5.2/5.3 数据墨水三档 + 动效 token + 数据大数字档（新增令牌） ---- */
+:root {
+  /* 文字对比三档：替代散落的 white/50~85 任意值（新代码逐步采用） */
+  --ink-hi: rgba(232, 232, 240, 0.92);
+  --ink: rgba(232, 232, 240, 0.70);
+  --ink-lo: rgba(232, 232, 240, 0.45);
+  /* 统一动效 token（transform-only 红线，配合既有 prefers-reduced-motion 全局块） */
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  /* 数据大数字档（stat tile 专用） */
+  --step-num: clamp(1.25rem, 1.1rem + 0.8vw, 1.75rem);
+}
+
+/* ---- 5.5 stat tile 规格卡（BoardUI stat tiles 模式 · 自研实现） ----
+   用途：StatsSidebar SERVER OVERVIEW 三卡等外围数据展示层。
+   结构：题头小字(label) + 大数字(value, mono) [+ 可选趋势位] */
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color var(--dur-fast) var(--ease-out-soft),
+    background var(--dur-fast) var(--ease-out-soft);
+}
+.stat-tile:hover {
+  border-color: rgba(191, 90, 242, 0.28);
+  background: rgba(191, 90, 242, 0.06);
+}
+.stat-tile-value {
+  font-family: var(--font-geist-mono, ui-monospace, monospace);
+  font-size: var(--step-num);
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--ink-hi);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-tile-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-lo);
+  white-space: nowrap;
+}
+
+/* ---- 5.8 音乐入口收纳进 Dock（管理员 2026-11-05 批准授权项）----
+   授权范围：仅音乐播放器 UI 层；播放逻辑 / API / 播放状态零触碰。
+   实现：music-player-init.js 完全零改动——
+   1) 收起态浮动圆钮 .mp-icon 由 Dock「音乐」入口取代（隐藏圆钮）；
+      展开面板 .mp-root 与 window.MusicPlayer API（expand/collapse/toggle）
+      全部保留原实现，Dock 通过该公开 API 驱动。
+   2) display:none 下 getBoundingClientRect() 高度为 0，
+      播放器自身 publishZone() 占位计算自动安全归零，无需其配合修改。 */
+.mp-icon {
+  display: none !important;
+}
+/* 手机端适配：展开面板固定于底部胶囊导航上方，通栏安全宽度。
+   （原实现桌面默认左下角 + 自由拖拽；移动端窄屏下面板会遮挡底部导航，
+   此处以纯 CSS 覆盖内联定位解决——拖拽定位在移动端让位于可用性。） */
+@media (max-width: 640px) {
+  .mp-root {
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-tile {
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+   Arena Console V2.0 · Batch 2 外围视觉（2026-11-06）
+   管理员批准：审计报告 §八 允许清单 2-6 · 仅新增块 · 不改上方任何既有规则
+   范围：header / footer / stats-sidebar / tier-explanation / profile-panel
+   红线自检：零排行榜类 · 零背景系统类 · 零共享类值变更 · 全新 v2b2- 命名空间
+   设计方向：Premium Gaming Dashboard × Modern SaaS × Minecraft PVP Identity
+   ============================================================ */
+
+/* ---- B2-1 品牌辉光边缘壳（叠加类：hover 点亮紫金渐变描边 + 顶部高光）---- */
+:root {
+  --v2b2-edge: linear-gradient(135deg, rgba(255, 215, 0, 0.38), rgba(191, 90, 242, 0.30) 45%, rgba(255, 255, 255, 0.10) 75%);
+  --v2b2-hi: rgba(255, 255, 255, 0.14);
+}
+.v2b2-shell {
+  position: relative;
+  box-shadow:
+    inset 0 1px 0 var(--v2b2-hi),
+    0 8px 28px -14px rgba(0, 0, 0, 0.55);
+}
+.v2b2-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--v2b2-edge);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.45;
+  transition: opacity var(--dur-fast) var(--ease-out-soft);
+  pointer-events: none;
+}
+.v2b2-shell:hover::after { opacity: 0.95; }
+
+/* ---- B2-2 header 玻璃胶囊 premium 化（叠加类：深玻璃 + 饱和提升）---- */
+.v2b2-header {
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015) 38%, rgba(191, 90, 242, 0.05)),
+    rgba(16, 16, 34, 0.55);
+}
+
+/* ---- B2-3 footer 状态条（叠加类：紫调渐变 + 顶部高光 + 项 hover 提亮）---- */
+.v2b2-footerbar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(191, 90, 242, 0.045));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.v2b2-footerbar span { transition: color var(--dur-fast) var(--ease-out-soft); }
+.v2b2-footerbar span:hover { color: var(--ink); }
+
+/* ---- B2-4 侧栏面板金线题头 + 悬浮微抬（叠加类，配 lgx-panel 使用；lgx-* 为侧栏私有）---- */
+.v2b2-panel {
+  transition: transform var(--dur-base) var(--ease-out-soft), box-shadow var(--dur-base) var(--ease-out-soft);
+}
+.v2b2-panel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px -18px rgba(191, 90, 242, 0.45);
+}
+.v2b2-panel > .lgx-panel-title {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.70), rgba(191, 90, 242, 0.50)) left bottom / 28px 2px no-repeat;
+  padding-bottom: 5px;
+}
+
+/* ---- B2-5 TierExplanation 容器 premium 化（仅自有容器；liquid-tier-badge / 色表零触碰）---- */
+.v2b2-tierexp {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(191, 90, 242, 0.04)),
+    rgba(14, 14, 30, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 12px 34px -20px rgba(0, 0, 0, 0.60);
+}
+
+/* ---- B2-6 stat tile 品牌化增强（叠加类：紫金渐变 hover；stat-tile 为外围私有类）---- */
+.v2b2-tile {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02) 55%, rgba(191, 90, 242, 0.05));
+}
+.v2b2-tile:hover {
+  border-color: rgba(255, 215, 0, 0.30);
+  background: linear-gradient(160deg, rgba(255, 215, 0, 0.06), rgba(191, 90, 242, 0.07));
+}
+
+/* ---- 动效可及性：新类全部纳入既有 reduced-motion 红线 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .v2b2-shell::after,
+  .v2b2-panel,
+  .v2b2-footerbar span {
+    transition: none !important;
+  }
+  .v2b2-panel:hover {
+    transform: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   V2 Batch 3 · 明亮主题奠基 + 亮面卡片系统（2026-11-06）
+   管理员批准范围：§二 移动端 / §三 明亮方向 / §六 去 AI 化
+   红线自检：独立 v2l- 命名空间 · 零全局 Token 覆盖（作用域内变量遮蔽）
+             · 零排行榜/背景系统/共享类值触碰 · 无新增发光/大面积渐变
+   亮面应用面：TierExplanation / StatsSidebar / Footer 状态条（均非冻结区）
+   Header/Dock 维持深色 chrome：品牌辉光元素（logo-go-glow/gold-text）
+   为深底设计，强行亮面会破坏对比度与品牌识别（§三"不强行统一"）。
+   ════════════════════════════════════════════════════════════ */
+:root {
+  /* 明亮主题 Token：暖白/雾灰底 + 深蓝黑墨水 + 青绿/蓝紫强调 + 收敛品牌金 */
+  --v2l-bg: #f7f6f2;          /* 暖白 */
+  --v2l-surface: #fdfcfa;     /* 亮面 */
+  --v2l-ink: #232a3a;         /* 主文字 */
+  --v2l-ink-2: #55607a;       /* 次级文字 */
+  --v2l-ink-3: #8b93a7;       /* 弱化文字 */
+  --v2l-line: rgba(35, 42, 58, 0.10);   /* 克制边框 */
+  --v2l-teal: #2e7d74;        /* 青绿强调 */
+  --v2l-violet: #5f5bd6;      /* 蓝紫强调 */
+  --v2l-gold: #b08a2e;        /* 品牌金（发丝线级使用） */
+}
+
+/* ── 亮面卡片基座：真实产品质感（纸面 + 细边 + 柔投影，零发光）── */
+.v2l-card {
+  background: linear-gradient(180deg, var(--v2l-surface), var(--v2l-bg));
+  border: 1px solid var(--v2l-line);
+  box-shadow:
+    0 1px 2px rgba(35, 42, 58, 0.05),
+    0 6px 18px -12px rgba(35, 42, 58, 0.18);
+  /* 作用域变量遮蔽：卡内既有 --ink-* 消费点自动获得亮面墨水层级，
+     全局 Token 值零改动（§三 独立命名空间红线） */
+  --ink-hi: var(--v2l-ink);
+  --ink: var(--v2l-ink-2);
+  --ink-lo: var(--v2l-ink-3);
+  color: var(--v2l-ink);
+}
+
+/* ── 亮面卡内深色主题工具类的定向再映射（仅 .v2l-card 作用域）──
+   现存组件文字均为深色主题基调，亮面需在作用域内重映射保证对比度；
+   排行榜/弹窗等冻结区不含 .v2l-card 祖先，零波及。 */
+.v2l-card .text-white\/40,
+.v2l-card .text-white\/45,
+.v2l-card .text-white\/50 { color: var(--v2l-ink-3); }
+.v2l-card .text-white\/85 { color: var(--v2l-ink); }
+.v2l-card .text-muted-foreground { color: var(--v2l-ink-3); }
+.v2l-card .text-secondary-foreground { color: var(--v2l-ink); }
+.v2l-card .lgx-panel-title { color: var(--v2l-ink-3); }
+.v2l-card .bg-white\/10 { background: rgba(35, 42, 58, 0.12); }
+.v2l-card .text-jade-400\/80 { color: var(--v2l-teal); }
+/* 批次2金线题头在亮面上的色温校正（紫→青绿，金保持） */
+.v2l-card.v2b2-panel > .lgx-panel-title {
+  background-image: linear-gradient(90deg, rgba(176, 138, 46, 0.75), rgba(46, 125, 116, 0.55));
+}
+
+/* ── stat tile 亮面化（stat-tile 为外围私有类，作用域内重定义质感）── */
+.v2l-card .stat-tile {
+  background: rgba(35, 42, 58, 0.035);
+  border-color: var(--v2l-line);
+}
+.v2l-card .stat-tile:hover {
+  border-color: rgba(46, 125, 116, 0.35);
+  background: rgba(46, 125, 116, 0.06);
+}
+.v2l-card .stat-tile.v2b2-tile:hover {
+  border-color: rgba(176, 138, 46, 0.40);
+  background: rgba(176, 138, 46, 0.06);
+}
+/* 段位徽章芯片在亮面上的承载底（liquid-tier-badge 本体零触碰） */
+.v2l-card .liquid-tier-badge { backdrop-filter: none; }
+/* b3-touch */
+
+/* ════════════════════════════════════════════════════════════
+   V2 Batch 4 · 背景滚动异常修复（管理员已批 P1）+ 亮面扩展支撑
+   2026-11-06 ｜ 依据：docs/ui-upgrade-v2/batch3/BACKGROUND-DIAGNOSIS.md §五
+   （用户对交付报告批复"批准"，授权实施 §五 建议修复方案）
+   红线自检：末尾追加 · 零既有规则改动 · 零排行榜/背景 zone/共享类值触碰
+   ════════════════════════════════════════════════════════════ */
+
+/* ── P1-a：html 兜底背景（诊断根因2）──
+   诊断实测：html 计算背景为 rgba(0,0,0,0) 且无 theme-color → 真机 iOS
+   橡皮筋越界时露出系统白底，感知为"颜色断层/闪烁"。body 已是 #1a1a2e，
+   html 同色兜底后正常渲染不可见（body 全覆盖其上），仅越界回弹瞬间生效，
+   桌面/移动端视觉零变化。既有 html 规则（L3582 ui-scale）仅含 font-size，
+   本规则零级联冲突。 */
+html {
+  background-color: #1a1a2e;
+}
+
+/* ── v2l 亮面卡内补充再映射（Profile Panel 亮面化用）──
+   沿用 Batch 3 作用域遮蔽模式：仅 .v2l-card 后代生效，
+   排行榜/弹窗等冻结区无 .v2l-card 祖先，零波及。 */
+.v2l-card .text-white { color: var(--v2l-ink); }
+.v2l-card .text-white\/90 { color: var(--v2l-ink); }
+.v2l-card .text-white\/80 { color: var(--v2l-ink-2); }
+
+/* 亮面卡内的玻璃子面重定义（半透白玻璃在纸面上不可读）：
+   与 Batch 3 stat-tile 同语言 —— 极淡墨水底 + 克制边框，去模糊 */
+.v2l-card .liquid-glass-subtle {
+  background: rgba(35, 42, 58, 0.035);
+  border-color: var(--v2l-line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* 亮面卡自身接管玻璃基座（v2l-card 不透明后 blur 无消费，省 GPU）：
+   仅去 backdrop-filter，背景/边框/投影仍由上方 Batch 3 规则提供 */
+.v2l-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* 面板长内容滚动容器（跟随亮面墨水色的细滚动条） */
+.v2l-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(35, 42, 58, 0.25) transparent;
+}
+.v2l-scroll::-webkit-scrollbar { width: 6px; }
+.v2l-scroll::-webkit-scrollbar-thumb {
+  background: rgba(35, 42, 58, 0.22);
+  border-radius: 999px;
+}
+.v2l-scroll::-webkit-scrollbar-track { background: transparent; }
+/* b4-bgfix */
+
+/* ════════════════════════════════════════════════════════════
+   V2 Batch 5 · Header 深色 chrome 微打磨（2026-11-06）
+   管理员批准范围：Batch 4 报告 §八.1（Header/胶囊导航深色 chrome 微打磨）
+   红线自检：纯末尾追加 · 零既有选择器/规则/值修改 · 零排行榜/背景系统触碰
+   设计依据：B3 §三裁定 Header 维持深色 chrome（品牌辉光元素为深底设计），
+   本批仅做深 chrome 细节质感：滚动压缩响应态 + 键盘可达配套，不强行亮面。
+   ════════════════════════════════════════════════════════════ */
+
+/* ── B5-1 header 滚动压缩响应态 ──
+   实现采用「tint 叠加子层」而非伪元素：.liquid-glass::before（顶缘光）与
+   .v2b2-shell::after（品牌描边）均已被占用；tint 为 header 内首个子元素
+   （z-0 + 内容层 relative），对 stacking 环境零依赖。opacity 可平滑插值，
+   避免 background 渐变无法 transition 的问题；零布局位移（不动 py/高度），
+   sticky header 下方内容零 reflow。 */
+.v2b5-hdr {
+  transition: box-shadow var(--dur-base) var(--ease-out-soft);
+}
+.v2b5-hdr.v2b5-scrolled {
+  /* 阴影收紧：滚动后胶囊「压近」内容，外阴影更短更实 */
+  box-shadow:
+    inset 0 1px 0 var(--v2b2-hi),
+    0 6px 18px -12px rgba(0, 0, 0, 0.68);
+}
+.v2b5-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: rgba(10, 10, 24, 0.42);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out-soft);
+  pointer-events: none;
+}
+.v2b5-scrolled .v2b5-tint { opacity: 1; }
+
+/* ── 动效可及性：reduced-motion 下响应态瞬时切换（无过渡动画）── */
+@media (prefers-reduced-motion: reduce) {
+  .v2b5-hdr,
+  .v2b5-tint {
+    transition: none !important;
+  }
+}
+/* b5-header */
+
+/* ════════════════════════════════════════════════════════════
+   V2 Batch 7 · 弹窗族亮面化（2026-11-06）
+   管理员批准范围：Batch 6 报告 §六.2 候选方向批复「batch7」→ 方案 B
+   冻结清单修订：见 baseline/freeze-manifest-v3-b7-addendum.md
+   （page.tsx 六弹窗函数体开放「仅 className 触点」，零逻辑变更）
+   红线自检：纯末尾追加 · 零既有选择器/规则/值修改 · 全部重映射
+   作用域于 .v2l-card.v2b7-modal（六弹窗专属组合），对 B3/B4 既有
+   亮面卡零波及；排行榜冻结区无 v2l-card 祖先，零命中。
+   设计依据：B4 profile-panel 亮面化先例（v2l-card + 作用域遮蔽）；
+   jade→teal 翻译沿用 B3「.text-jade-400/80 → --v2l-teal」先例；
+   品牌金 gold-bar 在暖白纸面上保持原样（金/暖白同族可读）。
+   ════════════════════════════════════════════════════════════ */
+
+/* ── B7-1 弹窗根：接管深色玻璃基座 ──
+   ChatModal / AiAssistant 根节点带内联深色背景与内联 blur（style 属性），
+   内联值只能以 !important 覆盖；其余四根无内联冲突，规则幂等无害。
+   投影换纸面语言（大范围深色玻璃阴影 → 克制的近距投影）。 */
+.v2l-card.v2b7-modal {
+  background: linear-gradient(180deg, var(--v2l-surface), var(--v2l-bg)) !important;
+  box-shadow:
+    0 24px 64px -28px rgba(26, 26, 46, 0.35),
+    0 4px 16px -8px rgba(26, 26, 46, 0.12);
+}
+/* backdrop-filter 覆盖声明已撤（B7 实证记录）：
+   1) Turbopack/Lightning CSS 确定性剥离 backdrop-filter 声明——none/blur(0px)
+      均被剥，!important 亦不豁免；连 B4 的 .v2l-card{backdrop-filter:none}
+      整条规则自 B4 起就未进过供给（无内联冲突故从未暴露）。
+   2) 无视觉消费：AiAssistant 内联 blur(16px) 仅在半透明背景可见，本规则
+      background 为 !important 不透明亮面渐变，backdrop 效果无表达面。
+      ChatModal 无内联 blur，无规则时初始值即 none。 */
+
+/* ── B7-2 白色系工具类定向再映射（暗→亮，仅弹窗作用域）── */
+.v2l-card.v2b7-modal .bg-white\/5 { background: rgba(35, 42, 58, 0.05); }
+.v2l-card.v2b7-modal .bg-white\/20 { background: rgba(35, 42, 58, 0.15); }
+.v2l-card.v2b7-modal .bg-white\/30 { background: rgba(35, 42, 58, 0.22); }
+.v2l-card.v2b7-modal .hover\:bg-white\/5:hover { background: rgba(35, 42, 58, 0.06); }
+.v2l-card.v2b7-modal .hover\:text-white:hover { color: var(--v2l-ink); }
+.v2l-card.v2b7-modal .border-white\/5,
+.v2l-card.v2b7-modal .border-white\/8,
+.v2l-card.v2b7-modal .border-white\/10 { border-color: var(--v2l-line); }
+
+/* ── B7-3 jade 强调翻译（沿用 B3 先例：jade-400 → 亮面 teal）──
+   bg-jade-500（AI 发送键实心品牌底）不做翻译：紫罗兰底 + jade-900
+   深字自持对比，保留品牌签名。 */
+.v2l-card.v2b7-modal .text-jade-400 { color: var(--v2l-teal); }
+.v2l-card.v2b7-modal .bg-jade-500\/15 { background: rgba(46, 125, 116, 0.10); }
+.v2l-card.v2b7-modal .border-jade-400\/20 { border-color: rgba(46, 125, 116, 0.28); }
+.v2l-card.v2b7-modal .hover\:bg-jade-500\/10:hover { background: rgba(46, 125, 116, 0.07); }
+.v2l-card.v2b7-modal .focus\:border-jade-400\/30:focus { border-color: rgba(46, 125, 116, 0.35); }
+.v2l-card.v2b7-modal .focus-within\:border-secondary-foreground\/30:focus-within { border-color: rgba(46, 125, 116, 0.35); }
+.v2l-card.v2b7-modal .file\:bg-jade-500\/20::file-selector-button { background: rgba(46, 125, 116, 0.14); }
+.v2l-card.v2b7-modal .file\:text-jade-400::file-selector-button { color: var(--v2l-teal); }
+
+/* ── B7-4 弱化文字与占位符 ── */
+.v2l-card.v2b7-modal .text-muted-foreground\/60 { color: var(--v2l-ink-3); }
+.v2l-card.v2b7-modal .placeholder\:text-muted-foreground\/60::placeholder { color: rgba(139, 147, 167, 0.85); }
+
+/* ── B7-5 状态色与细节组件 ── */
+/* 错误文案：暗底亮红 #FF453A 在纸面上换印刷红（复用既有亮面红值 L1622） */
+.v2l-card.v2b7-modal .text-\[var\(--system-red\)\] { color: #d70015; }
+/* 发丝分隔线：白系换墨水系 */
+.v2l-card.v2b7-modal .divider-refined {
+  background: linear-gradient(90deg, transparent, rgba(35, 42, 58, 0.12) 20%, rgba(35, 42, 58, 0.12) 80%, transparent);
+}
+/* 登录主按钮药丸：亮面下文字加深保证对比（底 tint 略提） */
+.v2l-card.v2b7-modal .liquid-pill-active {
+  color: var(--v2l-violet);
+  background: linear-gradient(135deg, rgba(191, 90, 242, 0.14) 0%, rgba(191, 90, 242, 0.07) 100%);
+}
+/* 焦点 ring offset 落亮面底色（Chat/Ai 输入框 focus-visible 态） */
+.v2l-card.v2b7-modal .focus-visible\:ring-offset-background:focus-visible { --tw-ring-offset-color: var(--v2l-bg); }
+
+/* ── B7-6 特例豁免：自绘深色面上的白色文字不翻译 ──
+   DiyEditor 主题预设 chip（chip 底色即主题真实色样，深底白字语义不变）
+   与 CommandPalette 玩家头像（内联头像底色上的姓名首字母）。 */
+.v2l-card.v2b7-modal .v2b7-preset .text-white { color: rgba(255, 255, 255, 0.95); }
+.v2l-card.v2b7-modal .v2b7-avatar .text-white { color: #fff; }
+
+/* ── B7-7 动效可及性说明：本批未新增任何 transition/animation
+   （全部复用组件既有 transition-colors / spring），故无
+   prefers-reduced-motion 追加规则。 */
+/* b7-modals */
+
+/* ════════════════════════════════════════════════════════════
+   V2 R3 · Batch R3-B1 · 原生控件主题化 + 交互色继承协调（方案 A）
+   管理员批复：R3-D0 只读诊断报告 §五 选项 A+B（2026-11-06）
+   依据：全站未声明 color-scheme → 浏览器按浅色渲染原生控件：
+   checkbox 勾选瞬间系统蓝 / 下拉与日期弹层浅色 / autofill 淡蓝底 /
+   ::selection 默认蓝紫 / 主滚动条浅色。
+   性质：纯增量声明，零既有选择器/规则/值修改；冻结区视觉零变化。
+   红线自检：排行榜/Tab/搜索/筛选功能零触碰；音乐 API/播放逻辑零触碰；
+   后端/认证/DB 零触碰；方案 C（背景切换重构）未获批不在本批。
+   ════════════════════════════════════════════════════════════ */
+
+/* A-1 原生控件深色化 + A-2 原生 accent 主题化：
+   checkbox/radio/progress/range 勾选与填充态 = 品牌 violet（--primary），
+   下拉/日期弹层转深色，主滚动条转深色，暗面上的 autofill 自动深色化 */
+:root {
+  color-scheme: dark;
+  accent-color: var(--primary);
+}
+
+/* A-3 文字选中色主题化：半透明 violet 叠加——深色 chrome 上白字可读、
+   v2l 亮面纸上墨字可读，一处声明双面兼容（不声明 color，保留元素原字色） */
+::selection {
+  background-color: rgba(191, 90, 242, 0.28);
+}
+
+/* A-4 autofill 同色化（仅亮面卡内输入行）：管理员登录 / 玩家注册的
+   用户名/密码/邮箱行。亮面行真实底 = v2l 纸面渐变(#fdfcfa→#f7f6f2)
+   × rgba(35,42,58,0.035) 墨水罩 ≈ #f0efec~#f5f5f3，取中值 #f3f2ef
+   作不透明填充遮蔽 Chrome 淡蓝 autofill 底；文字/光标随亮面墨水。
+   暗色面上的 autofill 由 A-1 自动深色化，无需另写。
+   作用域含 .v2l-card 祖先判定：排行榜等冻结区无 v2l-card，零波及。 */
+.v2l-card .liquid-glass-subtle input:-webkit-autofill,
+.v2l-card .liquid-glass-subtle textarea:-webkit-autofill,
+.v2l-card .liquid-glass-subtle select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #f3f2ef inset;
+  -webkit-text-fill-color: var(--v2l-ink);
+  caret-color: var(--v2l-ink);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* r3-ab-fix */
+
+/* ════════════════════════════════════════════════════════════
+   V7 · Hero 品牌标题 + 彩虹光标语（trace 1a1d4ec59c54a575，2026-11-12）
+   批次方案：docs/BATCH-PLAN-hero-rainbow-tagline-2026-11-12.md
+   - intro 顶部新增：大标题 GOATB CLUB（GO 亮光/ATB 金延续 header 品牌，
+     CLUB 银白微光压暗，让彩虹标语成为主角）
+   - 小标题三段 YOUR GAME. / YOUR IDENTITY. / YOUR LEGACY. 全彩虹光：
+     7 色相 seamless 流动渐变字 + 金/紫双色柔光晕（呼应品牌），负延迟错相
+   - 纯视觉层：零 JS、零布局结构改动；prefers-reduced-motion 冻结为静态渐变
+   ════════════════════════════════════════════════════════════ */
+
+/* CLUB 尾段：银白微光（低亮度避免与彩虹标语抢视觉焦点） */
+.hero-club-rest {
+  color: rgba(255, 255, 255, 0.94);
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.16),
+    0 0 22px rgba(191, 90, 242, 0.18);
+}
+
+/* 彩虹光标语：glyph 内彩虹流动 + element 级 drop-shadow 柔光晕。
+   刻意不用 text-shadow——background-clip:text + 透明填充下 text-shadow
+   会从字形内部透出形成糊字（此站已有先例 .logo-go-glow 用 filter 兜外晕） */
+.rainbow-light {
+  background-image: linear-gradient(90deg,
+    #FF5E5B 0%, #FFB84D 16%, #FFE94D 33%, #5BFF8A 50%, #4DD8FF 66%, #B06DFF 83%, #FF5E5B 100%);
+  background-size: 200% 100%;
+  background-position: 0% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter:
+    drop-shadow(0 0 6px rgba(255, 214, 10, 0.28))
+    drop-shadow(0 0 16px rgba(191, 90, 242, 0.18));
+  animation: rainbow-flow 7s linear infinite;
+}
+@keyframes rainbow-flow {
+  from { background-position: 0% 0; }
+  to   { background-position: -200% 0; }
+}
+/* 三段错相起跑：负延迟首帧即处于不同彩虹相位（节奏感，无初始冻结帧） */
+.rainbow-light.rainbow-d2 { animation-delay: -2.3s; }
+.rainbow-light.rainbow-d3 { animation-delay: -4.6s; }
+
+/* 动效降级：流动停帧，静态彩虹渐变保留（可读性/美观不受损） */
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-light,
+  .rainbow-light.rainbow-d2,
+  .rainbow-light.rainbow-d3 {
+    animation: none !important;
+  }
+}
+/* hero-rainbow */
+
+/* ============================================================
+   UR2 — UI/UX REDESIGN V2.0（trace 1a1d6ab1f1fdd8ed · 2026-11-13）
+   Arena Console V2.1 视觉升级层（4GB 内存约束版）。
+   红线自检：
+   · 纯追加块 —— 不修改上方任何既有规则/共享类值
+   · 冻结组件（xtlb-* / podium-card-1）仅 CSS 表现层 overlay，
+     零 TSX 编辑、零 DOM 结构改动、零业务值改动
+   · 零新增依赖 / 图片 / 字体；grain 为静态 feTurbulence data-URI
+   · 零 JS 常驻循环（reveal/ambient 为一次性 IO，见 lib/use-reveal.ts）
+   · 全部动效具备 prefers-reduced-motion 静态降级，
+     并接入现有 html.motion-paused 管线
+   ============================================================ */
+:root {
+  --ur2-dur-fast: 140ms;
+  --ur2-dur-base: 220ms;
+  --ur2-dur-slow: 420ms;
+  --ur2-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ur2-hairline: rgba(191, 90, 242, 0.16);
+  --ur2-hairline-strong: rgba(191, 90, 242, 0.34);
+}
+
+/* ── UR2-A1 · IO 门控 reveal（arm 门由 use-reveal effect 设置：
+   无 JS / SSR 首帧永远可见，零 CLS 零内容消失风险）── */
+[data-ur2-reveal] {
+  transition:
+    opacity var(--ur2-dur-slow) var(--ur2-ease),
+    transform var(--ur2-dur-slow) var(--ur2-ease);
+  transition-delay: calc(var(--ur2-i, 0) * 70ms);
+}
+[data-ur2-arm] [data-ur2-reveal]:not([data-ur2-in]) {
+  opacity: 0;
+  transform: translateY(12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-ur2-reveal] { transition: none !important; }
+  [data-ur2-arm] [data-ur2-reveal]:not([data-ur2-in]) {
+    opacity: 1;
+    transform: none;
+  }
+}
+html.motion-paused [data-ur2-reveal] { transition: none !important; }
+html.motion-paused [data-ur2-arm] [data-ur2-reveal]:not([data-ur2-in]) {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── UR2-A2 · 静态胶片颗粒（单层 fixed 合成，零动画零重绘）──
+   覆盖 z 35（内容层之上、导航/弹窗之下）；触屏降低强度。 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+@media (hover: none) {
+  body::after { opacity: 0.035; }
+}
+
+/* ── UR2-B1 · Hero 氛围光（预软化径向渐变，transform/opacity only；
+   容器 data-ur2-idle 时暂停计算，reduced-motion 静态）──
+   2026-11-14 修复：极光伪元素定位出血（left:-10% / right:-8%）在
+   全幅断点（<64em，hero 盒=视口宽）把文档撑出 23~41px 横向滚动 ——
+   移动端任何带横向分量的滑动都会让整页水平弹跳、左滑露出空白带，
+   榜单 Tab 条随之漂移（被误读为"胶囊自己动"）。补 overflow-x: clip
+   仅裁横向出血（clip 不产生滚动容器，sticky/纵向氛围溢出不受影响；
+   visible+clip 是规范允许的唯一混合轴组合）。出血外缘本就是渐变
+   78% 后的近透明尾部，视觉零差异。 */
+.ur2-hero {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+.ur2-hero::before,
+.ur2-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+.ur2-hero::before {
+  left: -10%;
+  top: -32%;
+  width: 58%;
+  aspect-ratio: 1.6;
+  background: radial-gradient(closest-side, rgba(191, 90, 242, 0.14), rgba(191, 90, 242, 0.05) 55%, transparent 78%);
+  animation: ur2-aurora-a 16s var(--ur2-ease) infinite alternate;
+}
+.ur2-hero::after {
+  right: -8%;
+  top: -12%;
+  width: 48%;
+  aspect-ratio: 1.8;
+  background: radial-gradient(closest-side, rgba(212, 175, 55, 0.10), rgba(212, 175, 55, 0.04) 55%, transparent 78%);
+  animation: ur2-aurora-b 12s var(--ur2-ease) infinite alternate;
+}
+@keyframes ur2-aurora-a {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.72; }
+  50% { opacity: 1; }
+  100% { transform: translate3d(6%, 10%, 0) scale(1.08); opacity: 0.66; }
+}
+@keyframes ur2-aurora-b {
+  0% { transform: translate3d(0, 0, 0) scale(1.05); opacity: 0.85; }
+  50% { opacity: 0.55; }
+  100% { transform: translate3d(-7%, 8%, 0) scale(0.95); opacity: 0.95; }
+}
+[data-ur2-idle] .ur2-hero::before,
+[data-ur2-idle] .ur2-hero::after,
+[data-ur2-idle].ur2-hero::before,
+[data-ur2-idle].ur2-hero::after {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ur2-hero::before,
+  .ur2-hero::after {
+    animation: none !important;
+    opacity: 0.72;
+  }
+}
+
+/* Hero 分隔金紫细线 + 眉标间距 */
+.ur2-hero-rule {
+  width: min(220px, 56%);
+  height: 1px;
+  margin: 14px auto 0;
+  border-radius: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(212, 175, 55, 0.55) 30%,
+    rgba(191, 90, 242, 0.55) 70%,
+    transparent);
+}
+
+/* ── UR2-C1 · 榜单空态卡片化（.xtlb-empty 为冻结元素，仅表现层）── */
+.xtlb-empty {
+  color: rgba(235, 235, 245, 0.66);
+  font-size: 12px;
+  padding: 26px 16px;
+  text-align: center;
+  border: 1px dashed rgba(191, 90, 242, 0.22);
+  border-radius: var(--radius-liquid-md, 22px);
+  background: linear-gradient(180deg, rgba(191, 90, 242, 0.045), rgba(191, 90, 242, 0.012));
+}
+.xtlb-empty::before {
+  content: '✦';
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(212, 175, 55, 0.78);
+  text-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+}
+
+/* ── UR2-C2 · 总榜行表现层（transition+inset 阴影，不动布局）── */
+.xtlb-row {
+  transition:
+    background var(--ur2-dur-fast) var(--ur2-ease),
+    box-shadow var(--ur2-dur-fast) var(--ur2-ease);
+}
+.xtlb-row:hover {
+  background: rgba(191, 90, 242, 0.055);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.xtlb-rank1 {
+  background-image: linear-gradient(135deg, rgba(212, 175, 55, 0.30), rgba(212, 175, 55, 0.14));
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.38);
+}
+.xtlb-rank2 {
+  background-image: linear-gradient(135deg, rgba(200, 205, 215, 0.22), rgba(200, 205, 215, 0.10));
+  box-shadow: inset 0 0 0 1px rgba(200, 205, 215, 0.32);
+}
+.xtlb-rank3 {
+  background-image: linear-gradient(135deg, rgba(205, 127, 50, 0.24), rgba(205, 127, 50, 0.10));
+  box-shadow: inset 0 0 0 1px rgba(205, 127, 50, 0.32);
+}
+
+/* ── UR2-C3 · 模式 Tab 条（43px 几何不动，仅 transform/阴影/hover；
+   横向滚动条隐藏 + 两缘渐隐提示可滑动）── */
+.xtlb-tabs {
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+.xtlb-tabs::-webkit-scrollbar { display: none; }
+.xtlb-tab {
+  transition:
+    transform var(--ur2-dur-fast) var(--ur2-ease),
+    border-color var(--ur2-dur-fast) var(--ur2-ease),
+    background var(--ur2-dur-fast) var(--ur2-ease),
+    box-shadow var(--ur2-dur-fast) var(--ur2-ease);
+}
+.xtlb-tab:hover { transform: translateY(-1px); }
+.xtlb-tab:active { transform: translateY(0) scale(0.97); }
+.xtlb-tab.active {
+  box-shadow:
+    0 4px 18px -6px rgba(191, 90, 242, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* ── UR2-C4 · 搜索框聚焦环升级（替换 1px outline）── */
+.xtlb-search:focus-visible {
+  outline: none;
+  border-color: var(--ur2-hairline-strong);
+  box-shadow: 0 0 0 3px rgba(191, 90, 242, 0.14);
+}
+
+/* ── UR2-C5 · 榜首荣誉环（EMOTION 领奖台 #1 = .lgx-podium-1，conic 渐变旋转；
+   @property 不支持的浏览器静态显示起始角，优雅降级）── */
+@property --ur2-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.lgx-podium-1::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(from var(--ur2-angle),
+    rgba(212, 175, 55, 0) 0%,
+    rgba(212, 175, 55, 0.85) 12%,
+    rgba(191, 90, 242, 0.5) 30%,
+    rgba(212, 175, 55, 0) 45%,
+    rgba(212, 175, 55, 0) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: ur2-ring 8s linear infinite;
+  pointer-events: none;
+}
+@keyframes ur2-ring {
+  to { --ur2-angle: 360deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lgx-podium-1::after {
+    animation: none !important;
+    --ur2-angle: 120deg;
+  }
+}
+
+/* ── UR2-E1 · 导航标签对比度微调（B 类显示层）── */
+.nav-capsule-label {
+  color: rgba(235, 235, 245, 0.56);
+}
+.nav-capsule-item.is-active .nav-capsule-label {
+  color: rgba(255, 255, 255, 0.92);
+}
+.nav-capsule-item:hover:not(.is-active) .nav-capsule-label {
+  color: rgba(235, 235, 245, 0.72);
+}
+
+/* —— ur2-ui-redesign-v2 —— */
