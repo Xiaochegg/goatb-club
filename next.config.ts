@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // 2026-11-25 部署加固：Next 16 已移除 next.config 的 eslint 配置项
+  // （构建期不再自动跑 lint，质量由 bun run lint 把关）。
   reactStrictMode: false,
   // 2026-12 音乐 API 替换 v2：UNM 解灰引擎（@neteasecloudmusicapienhanced/
   // unblockmusic-utils 及 mini-service）已整体移除，新解灰链（GD-Studio curl

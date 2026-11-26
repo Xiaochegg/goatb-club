@@ -8,8 +8,12 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// TOAST_LIMIT=3：通知弹窗改为三层纸堆（lab/ToastStack 参考稿），
+// 前张全显、后两张只露纸边，悬停摊平成列表
+const TOAST_LIMIT = 3
+// 关闭后 200ms 即从 state 移除（180ms 离场动画播完留 20ms 余量），
+// 否则纸堆会长期被幽灵 toast 占位（旧值 1000000 是单条时代的兜底）
+const TOAST_REMOVE_DELAY = 200
 
 type ToasterToast = ToastProps & {
   id: string

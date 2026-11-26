@@ -89,3 +89,35 @@ export async function clearPlayerCookie() {
 }
 
 export const PLAYER_COOKIE = PLAYER_COOKIE_NAME;
+
+/**
+ * 公开输出的玩家字段白名单剥离（自审核 P0 修复）。
+ * 修复前：findMany 全字段直出，passwordHash/email/role/lastLoginAt 泄露给任何访客。
+ * 管理员登录时可保留 email/role 供后台使用；passwordHash 任何情况都不出。
+ * AUTH V2.0 PHASE 3：新增安全面列（sessionEpoch/mustChangePassword/disabledAt/
+ * passwordResetAt）对任何身份一律剥离——账号安全状态仅经 admin/player-account
+ * 专用接口按需返回（SR-02 扩展口径；工单三「管理员不能查看用户原始密码」的
+ * 延伸：会话纪元等安全内部态同样不公开）。
+ */
+export function sanitizePlayerOutput<
+  T extends {
+    passwordHash?: string | null; email?: string | null; role?: string; lastLoginAt?: Date | null;
+    sessionEpoch?: number; mustChangePassword?: boolean; disabledAt?: Date | null; passwordResetAt?: Date | null;
+    mcUuid?: string | null; avatarUpdatedAt?: Date | null;
+  },
+>(p: T, opts: { isAdmin: boolean }): Omit<T, 'passwordHash' | 'lastLoginAt' | 'sessionEpoch' | 'mustChangePassword' | 'disabledAt' | 'passwordResetAt'> & { email?: string | null } {
+  const {
+    passwordHash: _ph, lastLoginAt: _ll,
+    sessionEpoch: _se, mustChangePassword: _mcp, disabledAt: _da, passwordResetAt: _pra,
+    ...rest
+  } = p;
+  if (!opts.isAdmin) {
+    // SKIN STUDIO V1（2026-11-21）：mcUuid 为内部身份锚点，公众输出剥离
+    //（管理员保留供诊断）；avatarUpdatedAt 同属审计元数据，一并剥离。
+    const { email: _em, role: _ro, mcUuid: _mu, avatarUpdatedAt: _au, ...pub } = rest;
+    // 类型断言：TS 无法从泛型 Omit 推导 spread 结果与返回签名兼容（既有噪音，
+    // 本批以单行断言归零触碰文件 tsc 错误；运行时行为不变）
+    return pub as Omit<T, 'passwordHash' | 'lastLoginAt'> & { email?: string | null };
+  }
+  return rest;
+}

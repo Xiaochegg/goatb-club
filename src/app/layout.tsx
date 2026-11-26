@@ -3,7 +3,8 @@ import "./fonts.css"; // 本地字体快照（像素字体/Geist 全自托管，
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { MotionProvider } from "@/components/motion-provider";
-import { MusicPlayerLoader } from "@/components/music-player/music-player-loader";
+// 2026-12：旧 MusicPlayerLoader 脚本链已拆除——播放器改为页面内 React 组件
+//（MusicDrawerPlayer，挂载于 page.tsx），点击 Dock 音乐键必然弹出。
 import { THEME_PRESETS, XT_MODE_ICONS } from "@/lib/constants";
 
 // 响应式规范：显式 viewport（禁 user-scalable=no / maximum-scale，保留缩放能力）；
@@ -51,21 +52,29 @@ export const metadata: Metadata = {
 };
 
 // ============================================================
-// 主题防闪紫 boot 脚本（用户反馈 2026-10：背景瞬间闪成紫色）——
+// 主题防闪 boot 脚本（用户反馈 2026-10：背景瞬间闪成紫色）——
 // 根因：主题默认 aurora（紫），localStorage 里的已存主题要等 React
 // hydration 后的 useEffect 才应用 → 首屏先画紫再切走 = FOUC。
 // 方案：head 内阻塞脚本在首次绘制前把已存主题渐变/自定义背景写进
 // --goatb-bg CSS 变量（page.tsx 根容器 background 全走该变量），
 // SSR/客户端渲染的 style 字符串一致 → 零 hydration mismatch、零闪色。
 // 渐变映射由服务端从 THEME_PRESETS 序列化注入，单一来源零漂移。
+// 2026-12：默认主题切为 void（液态玻璃，纯黑深空）——首次访问
+// （无 localStorage）按 void 预写变量与 data-theme，首帧即深空玻璃。
 // ============================================================
 const themeBootScript = (() => {
   const map = JSON.stringify(
     Object.fromEntries(Object.entries(THEME_PRESETS).map(([k, v]) => [k, v.gradient]))
   );
+  // data-theme 同步预写（橡皮管主题 2026-11-17）：globals.css 的
+  // html[data-theme='rubberhose'] 场景变形依赖该属性；在 --goatb-bg
+  // 同一阻塞脚本里写入 → 首帧即正确主题场景，零闪。
+  // 无存档主题时默认 'void'（与 store.ts 初始 theme 一致）。
   return `(function(){try{var M=${map};var el=document.documentElement;var t=null,bg=null;try{t=localStorage.getItem('goatb-theme');bg=localStorage.getItem('goatb-bg');}catch(e){}
+if(!t){t='void';}
 if(bg){el.style.setProperty('--goatb-bg','url("'+String(bg).replace(/["\\\\]/g,'')+'") center/cover no-repeat');}
-else if(t&&M[t]){el.style.setProperty('--goatb-bg',M[t]);}}catch(e){}})();`;
+else if(t&&M[t]){el.style.setProperty('--goatb-bg',M[t]);}
+if(t&&M[t]){el.setAttribute('data-theme',t);}}catch(e){}})();`;
 })();
 
 // XT 模式图标预加载（用户反馈 2026-10：切模式图标要 ~0.5s 才出现）——
@@ -84,11 +93,11 @@ export default function RootLayout({
       <head>
         <style
           dangerouslySetInnerHTML={{
-            // --goatb-bg 兜底默认 = 默认主题 aurora 渐变（无 localStorage 时）
-            // + html 画布底色深色（工单：手机 Brave 白屏修复 · 方案 C，2026-11-09 授权）：
-            //   render-blocking CSS 下载前/失败后，浏览器画布默认纯白 →
-            //   内联声明深色底，把"白屏窗口"变成主题深色窗口（与 theme-color meta 一致）
-            __html: `:root{--goatb-bg:${THEME_PRESETS.aurora.gradient}}html{background:#1a1a2e}`,
+            // --goatb-bg 兜底默认 = 默认主题 void 渐变（无 localStorage 时）：
+            // 纯黑深空画布（液态玻璃 2026-12）——render-blocking CSS 下载前/
+            // 失败后，浏览器画布默认纯白 → 内联声明深黑底，把"白屏窗口"
+            // 变成 void 深空窗口（与 html[data-theme='void'] 画布一致）
+            __html: `:root{--goatb-bg:${THEME_PRESETS.void.gradient}}html{background:#030305}`,
           }}
         />
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
@@ -103,8 +112,7 @@ export default function RootLayout({
           {children}
         </MotionProvider>
         <Toaster />
-        {/* 音乐播放器：liveling CDN + 4 个 public/js（Task 38） */}
-        <MusicPlayerLoader />
+        {/* 音乐播放器：2026-12 起为 page.tsx 内 MusicDrawerPlayer（React 抽屉组件，零脚本注入） */}
       </body>
     </html>
   );
