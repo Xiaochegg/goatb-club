@@ -226,12 +226,23 @@ export const XT_MODE_ICONS: Partial<Record<GameMode, string>> = {
 // --- Theme Presets ---
 // 命名规范：name 全部中文。新增主题色值只取自「高端商业色板」28 个唯一色，
 // 每个色值全局只用一次（bg / 渐变中段 / 点缀色三种角色），零重复。
+// 2026-12 新增 void（液态玻璃）：纯黑深空 × 霓虹光晕，材质全套变形在
+// globals.css html[data-theme='void'] 作用域内实现（同 rubberhose 构架）。
 export type ThemePreset =
+  | 'void'
   | 'aurora' | 'sunset' | 'deepsea' | 'forest' | 'cosmos'
   | 'midnight' | 'navy' | 'pine' | 'burgundy' | 'charcoal'
-  | 'graphite' | 'deepgray' | 'obsidian' | 'jadeblack' | 'slate';
+  | 'graphite' | 'deepgray' | 'obsidian' | 'jadeblack' | 'slate'
+  | 'rubberhose';
 
 export const THEME_PRESETS: Record<ThemePreset, { name: string; description: string; accent: string; bg: string; gradient: string }> = {
+  void: {
+    name: '液态玻璃',
+    description: '纯黑深空 × 霓虹光晕 · Liquid Glass',
+    accent: '#00F2FE',
+    bg: '#030305',
+    gradient: 'linear-gradient(180deg, #030305 0%, #07070e 50%, #030305 100%)',
+  },
   aurora: {
     name: '极光',
     description: '默认主题 · 紫罗兰 ambient',
@@ -347,6 +358,18 @@ export const THEME_PRESETS: Record<ThemePreset, { name: string; description: str
     bg: '#0f051a',
     gradient: 'linear-gradient(135deg, #0f051a 0%, #18082d 50%, #0f051a 100%)',
   },
+  // 2026-11-17 新增：橡皮管动画（Rubber Hose）——1930 年代美国早期卡通风格。
+  // 美术语言参考 finktheartist/rubber-hose-ui（MIT）：粗墨线 #251d16、
+  // 纸面奶油底、硬偏移阴影、馅饼眼白手套；全套场景变形在 globals.css
+  // html[data-theme='rubberhose'] 作用域内实现（data-theme 由 boot 脚本
+  // 与 page.tsx 主题 effect 同步写入）。
+  rubberhose: {
+    name: '橡皮管',
+    description: '1930s 橡皮管动画 · 胶片复古',
+    accent: '#D8442B',
+    bg: '#ecd7ac',
+    gradient: 'linear-gradient(135deg, #ecd7ac 0%, #f4e3bd 50%, #e5cfa0 100%)',
+  },
 };
 
 // --- Theme Panel Palette (inverted surface for readability) ---
@@ -367,6 +390,15 @@ export interface ThemePanelPalette {
   border: string;        // rgba — borders
   borderSubtle: string;  // rgba — subtle borders
   accent: string;        // hex — accent tint
+}
+
+/** 判断 hex 底色是否为亮色（主题选择器亮/暗底自适配文字色用） */
+export function isLightHex(hex: string): boolean {
+  try {
+    return relativeLuminance(hexToRgb(hex)) >= 0.5;
+  } catch {
+    return false;
+  }
 }
 
 function hexToRgb(hex: string): [number, number, number] {
